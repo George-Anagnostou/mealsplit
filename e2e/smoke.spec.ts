@@ -94,7 +94,7 @@ test('the web manifest loads', async ({ page, request }) => {
 test('the app shell works offline for a returning visitor', async ({ page, context }) => {
   await page.goto('/');
   await page.evaluate(() => navigator.serviceWorker.ready);
-  // Reload once so the page is controlled and its hashed JS/CSS are cached at runtime.
+  // Reload once so the page is controlled by the worker, as it is on any later visit.
   await page.reload();
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
 
@@ -104,16 +104,14 @@ test('the app shell works offline for a returning visitor', async ({ page, conte
   await expect(page.getByLabel('Item name')).toHaveCount(5);
 });
 
-// Known gap, fixed by the PWA hardening PR: the service worker only caches JS/CSS it sees
-// *after* it takes control, so going offline straight after the very first visit leaves a
-// blank page. test.fail() flips to a failure once precaching lands, as a reminder to
-// turn this into a normal test.
-test.fail('the app shell works offline after a single visit', async ({ page, context }) => {
+// The service worker precaches the whole shell when it installs, so one visit is enough.
+test('the app shell works offline after a single visit', async ({ page, context }) => {
   await page.goto('/');
   await page.evaluate(() => navigator.serviceWorker.ready);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Example' })).toBeVisible({ timeout: 3000 });
+  await page.getByRole('button', { name: 'Example' }).click();
+  await expect(page.getByLabel('Item name')).toHaveCount(5);
 });
 
 test('the service worker registers (all browsers)', async ({ page }) => {
