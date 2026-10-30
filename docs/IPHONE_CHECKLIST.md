@@ -59,6 +59,15 @@ Tap **Copy · Zelle**.
 - [ ] Enter a Discount bigger than the items: a warning explains that only the item total is applied, and no share goes negative.
 - [ ] After parsing a receipt that has a total, the line at the bottom of the Split tab says "receipt total $X ✓". A receipt with no total says there is nothing to check against.
 
+## 9. Saved data, history and export
+- [ ] Add a friend and fill in My details, then fully close the app and relaunch it from the Home Screen: they are still there, and so is the tab you were on.
+- [ ] On the Split tab tap **Save to history**; open the History tab, open the meal (read-only), then **Duplicate into new bill**.
+- [ ] Tap **New bill**: the same friends are still ticked, and the old bill is in History.
+- [ ] History → Your data → **Export**: Safari asks to download or opens a Share sheet; save it to Files. Check the file opens and reads as JSON.
+- [ ] **Import…** and choose that file from Files: it shows what it contains and asks before replacing; after confirming, your friends and history are there.
+- [ ] **Clear all data** asks first, then resets the app.
+- [ ] Private Browsing: the app shows the "isn't letting mealsplit save" notice and keeps working.
+
 ---
 
 **Tested on:** ______ (date) · iOS ______ · build / commit ______ · notes:

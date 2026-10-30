@@ -1,5 +1,4 @@
 import {
-  billNote,
   groupSummary,
   owesNothing,
   shareMessage,
@@ -9,12 +8,12 @@ import {
   zelleMessage,
 } from '../core/links';
 import { fmt } from '../core/money';
-import { discountNotice, type PartyTotals, reconcile, UNASSIGNED } from '../core/split';
-import { computeBill, partiesOf } from '../state/selectors';
-import { useAppState } from '../state/store';
-import { type AppState, type Friend, ME } from '../state/types';
+import type { PartyTotals } from '../core/split';
+import { splitSummary } from '../state/selectors';
+import { useAppState, useDispatch } from '../state/store';
+import type { AppState, Friend } from '../state/types';
 import { Avatar } from './Avatar';
-import { useCopy } from './Toast';
+import { useCopy, useToast } from './Toast';
 
 interface CardProps {
   name: string;
@@ -100,29 +99,25 @@ function PartyCard({ name, totals, friend, note, state }: CardProps) {
   );
 }
 
-export function SplitView() {
-  const state = useAppState();
+/** The per-person breakdown for a bill. Used for the live bill and, read-only, for past meals. */
+export function SplitBody({ state }: { state: AppState }) {
   const copy = useCopy();
-  const { bill, me } = state;
+  const { bill } = state;
 
   if (!bill.items.length) {
     return <div className="empty">Nothing to split yet. Start on the Receipt tab.</div>;
   }
 
-  const r = computeBill(bill);
-  const note = billNote(bill.title || 'Dinner', bill.date);
-  const unassigned = r.parties[UNASSIGNED];
-  const friends = partiesOf(state)
-    .filter((p) => p.id !== ME && r.parties[p.id])
-    .map((p) => ({
-      party: p,
-      totals: r.parties[p.id],
-      friend: state.people.find((q) => q.id === p.id),
-    }));
-  const meTotals = r.parties[ME];
-  const meName = me.name || 'Me';
-  const recon = reconcile(r.totalC, bill.parsedTotalC);
-  const notice = discountNotice(bill.discountC, r.subtotalC);
+  const {
+    result: r,
+    note,
+    meName,
+    discountNotice: notice,
+    recon,
+    unassigned,
+    friends,
+    meTotals,
+  } = splitSummary(state);
 
   const summary = () =>
     groupSummary({
@@ -176,5 +171,28 @@ export function SplitView() {
         </div>
       )}
     </div>
+  );
+}
+
+export function SplitView() {
+  const state = useAppState();
+  const dispatch = useDispatch();
+  const toast = useToast();
+  return (
+    <>
+      <SplitBody state={state} />
+      {state.bill.items.length > 0 && (
+        <button
+          type="button"
+          className="ghost savebtn"
+          onClick={() => {
+            dispatch({ type: 'finishBill', now: Date.now() });
+            toast('Saved to history');
+          }}
+        >
+          Save to history
+        </button>
+      )}
+    </>
   );
 }

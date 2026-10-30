@@ -1,0 +1,24 @@
+{
+  "me": null,
+  "people": [
+    { "id": "p1", "name": "Sam", "venmo": 42, "contact": null },
+    "not a friend",
+    { "name": "No Id" },
+    { "id": "p1", "name": "Duplicate Id" }
+  ],
+  "bill": {
+    "title": null,
+    "date": "last tuesday",
+    "items": [
+      { "name": "No id or price" },
+      { "id": "x", "name": "Fish", "cents": "1200", "who": ["p1", "ghost", 7, "me"] },
+      { "id": "x", "name": "Same id", "cents": -300.4, "who": "everyone" },
+      42
+    ],
+    "taxC": null,
+    "tipMode": "bogus",
+    "tipPct": "20",
+    "here": ["p1", "ghost", 3],
+    "parsedTotalC": "4980"
+  }
+}
