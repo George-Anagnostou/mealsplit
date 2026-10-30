@@ -61,12 +61,23 @@ Tap **Copy · Zelle**.
 
 ## 9. Saved data, history and export
 - [ ] Add a friend and fill in My details, then fully close the app and relaunch it from the Home Screen: they are still there, and so is the tab you were on.
-- [ ] On the Split tab tap **Save to history**; open the History tab, open the meal (read-only), then **Duplicate into new bill**.
+- [ ] On the Split step tap **Save to history**; open History, open the meal (read-only), then **Duplicate into new bill**.
 - [ ] Tap **New bill**: the same friends are still ticked, and the old bill is in History.
 - [ ] History → Your data → **Export**: Safari asks to download or opens a Share sheet; save it to Files. Check the file opens and reads as JSON.
 - [ ] **Import…** and choose that file from Files: it shows what it contains and asks before replacing; after confirming, your friends and history are there.
 - [ ] **Clear all data** asks first, then resets the app.
 - [ ] Private Browsing: the app shows the "isn't letting mealsplit save" notice and keeps working.
+
+## 10. Flow, undo and accessibility
+- [ ] The step bar shows the current step (bold, filled dot) and ticks finished ones; tapping a step jumps there. Back / Next at the bottom sit clear of the home bar (no overlap with the swipe-up area) and are easy to reach with a thumb.
+- [ ] Rotate to landscape: nothing hides behind the notch or the sides (the content respects the safe areas).
+- [ ] Assign: tap an item and the people panel opens above Back / Next without covering the item list's end. Turn on **Select several**, tap two items, tap a person: both get them. **All** on a row, **Split the rest among everyone**, and **Undo** (button and toast) all behave.
+- [ ] Next on Assign reads **Split anyway** while anything is unassigned, and the Split step shows a warning with an **Assign it** button.
+- [ ] Type a Tax and a Tip, then parse the receipt again: they stay, marked **edited**, and the toast says so. **Let parsing replace it** hands them back.
+- [ ] Toasts (Undo, "Split the rest…") appear at the bottom, just above Back / Next (above the people panel when it is open), clear of the home indicator, and never cover a step heading.
+- [ ] Turn on VoiceOver: step bar buttons read "current step"; each item reads its name, price and who shares it; the toast is announced.
+- [ ] Settings → Accessibility → Motion → Reduce Motion: no sliding or smooth scrolling in the app.
+- [ ] Settings → Display → Text Size larger: the layout still works, with nothing cut off.
 
 ---
 

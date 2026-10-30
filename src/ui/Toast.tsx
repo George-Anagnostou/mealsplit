@@ -1,24 +1,42 @@
 import { createContext, type ReactNode, useCallback, useContext, useRef, useState } from 'react';
 
-type ToastFn = (message: string) => void;
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+/** Show a short message. With an action (like Undo) it stays a little longer. */
+type ToastFn = (message: string, action?: ToastAction) => void;
 const ToastCtx = createContext<ToastFn>(() => {});
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [message, setMessage] = useState<string | null>(null);
+  const [shown, setShown] = useState<{ message: string; action?: ToastAction } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const toast = useCallback<ToastFn>((m) => {
-    setMessage(m);
+  const toast = useCallback<ToastFn>((message, action) => {
+    setShown({ message, action });
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => setMessage(null), 1800);
+    timer.current = setTimeout(() => setShown(null), action ? 6000 : 2200);
   }, []);
   return (
     <ToastCtx.Provider value={toast}>
       {children}
-      {message && (
-        <div className="toast" role="status">
-          {message}
-        </div>
-      )}
+      <div className="toastwrap" role="status">
+        {shown && (
+          <div className="toast">
+            <span>{shown.message}</span>
+            {shown.action && (
+              <button
+                type="button"
+                onClick={() => {
+                  shown.action?.onClick();
+                  setShown(null);
+                }}
+              >
+                {shown.action.label}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </ToastCtx.Provider>
   );
 }

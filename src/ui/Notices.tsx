@@ -15,8 +15,8 @@ export function Notices() {
 
   const saveText =
     saveFailure === 'full'
-      ? 'This device’s storage is full, so changes aren’t being saved. Export your data (History tab) to keep a copy.'
-      : 'Your browser isn’t letting mealsplit save (private mode?). Changes will be lost when you close the app. Export your data (History tab) to keep a copy.';
+      ? 'This device’s storage is full, so changes aren’t being saved. Export your data (History) to keep a copy.'
+      : 'Your browser isn’t letting mealsplit save (private mode?). Changes will be lost when you close the app. Export your data (History) to keep a copy.';
 
   return (
     <>

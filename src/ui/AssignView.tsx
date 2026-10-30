@@ -1,100 +1,210 @@
+import { useEffect, useRef, useState } from 'react';
 import { fmt } from '../core/money';
+import { unassignedItems } from '../state/flow';
 import { nameOf, partiesOf, presentWho } from '../state/selectors';
 import { useAppState, useDispatch } from '../state/store';
 import { Avatar } from './Avatar';
+import { useToast } from './Toast';
 
-interface Props {
-  sel: string | null;
-  onSelect: (id: string | null) => void;
-}
+const smooth = (): ScrollBehavior =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 
-export function AssignView({ sel, onSelect }: Props) {
+/**
+ * Tap an item, then tap who had it. Turn on "Select several" to tap more items first: the
+ * people you tap then apply to all of them (a person is "mixed" when only some have it).
+ * Everything here can be undone.
+ */
+export function AssignView() {
   const state = useAppState();
   const dispatch = useDispatch();
+  const toast = useToast();
   const { bill } = state;
+  const [picked, setPicked] = useState<string[]>([]);
+  const [several, setSeveral] = useState(false);
+
   const parties = partiesOf(state);
-  const unassigned = bill.items.filter((i) => presentWho(bill, i.who).length === 0).length;
-  const selIndex = bill.items.findIndex((i) => i.id === sel);
-  const selItem = selIndex >= 0 ? bill.items[selIndex] : undefined;
+  const everyone = parties.map((p) => p.id);
+  const missing = unassignedItems(state);
+  // Ids can go stale when items are removed on the Receipt step.
+  const sel = bill.items.filter((it) => picked.includes(it.id));
+  const selTotal = sel.reduce((n, it) => n + it.cents, 0);
+  const canUndo = state.undo.length > 0;
+  const pickerRef = useRef<HTMLElement>(null);
+  const pickerOpen = sel.length > 0;
 
-  let banner: { cls: string; text: string };
-  if (!bill.items.length) banner = { cls: 'empty', text: 'Add items on the Receipt tab first.' };
-  else if (parties.length < 2)
-    banner = { cls: 'banner warn', text: 'Add friends on the People tab and tick who’s here.' };
-  else if (unassigned)
-    banner = {
-      cls: 'banner warn',
-      text: `${unassigned} item${unassigned > 1 ? 's' : ''} not assigned yet. Tap an item, then tap who had it.`,
+  // Publish the picker's height so the toast (and the page bottom padding) can sit above it.
+  useEffect(() => {
+    const el = pickerRef.current;
+    if (!pickerOpen || !el) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty('--picker-h', `${el.offsetHeight}px`);
+    publish();
+    const watch = new ResizeObserver(publish);
+    watch.observe(el);
+    return () => {
+      watch.disconnect();
+      root.style.removeProperty('--picker-h');
     };
-  else banner = { cls: 'banner', text: 'Everything is assigned ✓ Head to Split.' };
+  }, [pickerOpen]);
+  const undo = () => dispatch({ type: 'undo' });
+  const undoable = (message: string) => toast(message, { label: 'Undo', onClick: undo });
 
-  const everyone = selItem ? parties.every((p) => selItem.who.includes(p.id)) : false;
+  const pickItem = (id: string) => {
+    if (several) setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
+    else setPicked(picked.length === 1 && picked[0] === id ? [] : [id]);
+  };
+
+  const setMode = (on: boolean) => {
+    setSeveral(on);
+    if (!on) setPicked(picked.slice(0, 1));
+  };
 
   const next = () => {
-    const nextItem = bill.items[selIndex + 1];
-    onSelect(nextItem ? nextItem.id : null);
+    const nextItem = bill.items[bill.items.findIndex((i) => i.id === sel[0]?.id) + 1];
+    setPicked(nextItem ? [nextItem.id] : []);
     if (nextItem) {
       requestAnimationFrame(() =>
         document
           .getElementById(`arow-${nextItem.id}`)
-          ?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+          ?.scrollIntoView({ block: 'center', behavior: smooth() }),
       );
     }
   };
 
+  const allHave = (id: string) => sel.length > 0 && sel.every((it) => it.who.includes(id));
+  const someHave = (id: string) => sel.some((it) => it.who.includes(id));
+  const everyoneOnSel = sel.length > 0 && everyone.every(allHave);
+
+  let banner: { cls: string; text: string; fix?: boolean };
+  if (!bill.items.length) banner = { cls: 'empty', text: 'Add items on the Receipt step first.' };
+  else if (parties.length < 2)
+    banner = { cls: 'banner warn', text: 'Add friends on the People step and tick who’s here.' };
+  else if (missing.length)
+    banner = {
+      cls: 'banner warn',
+      text: `${missing.length} item${missing.length > 1 ? 's' : ''} not assigned yet. Tap an item, then tap who had it.`,
+      fix: true,
+    };
+  else banner = { cls: 'banner', text: 'Everything is assigned ✓ Head to Split.' };
+
   return (
     <>
-      <div>
-        <div className={banner.cls}>{banner.text}</div>
+      <div className={banner.cls} role={banner.cls === 'banner warn' ? 'status' : undefined}>
+        <span>{banner.text}</span>
+        {banner.fix && (
+          <button
+            type="button"
+            className="small"
+            onClick={() => {
+              dispatch({ type: 'setWhoMany', itemIds: missing.map((i) => i.id), who: everyone });
+              undoable('Split the rest among everyone');
+            }}
+          >
+            Split the rest among everyone
+          </button>
+        )}
       </div>
+
+      {bill.items.length > 0 && (
+        <div className="toolbar">
+          <button
+            type="button"
+            className="ghost small"
+            aria-pressed={several}
+            onClick={() => setMode(!several)}
+          >
+            Select several
+          </button>
+          {several && (
+            <button
+              type="button"
+              className="ghost small"
+              onClick={() => setPicked(missing.map((i) => i.id))}
+              disabled={missing.length === 0}
+            >
+              Pick unassigned
+            </button>
+          )}
+          <button type="button" className="ghost small push" disabled={!canUndo} onClick={undo}>
+            ↶ Undo
+          </button>
+        </div>
+      )}
+
       <div>
         {bill.items.map((it) => {
           const who = presentWho(bill, it.who);
+          const on = picked.includes(it.id);
+          const names = who.map((id) => nameOf(state, id));
           return (
-            <button
-              type="button"
-              id={`arow-${it.id}`}
-              key={it.id}
-              className={`arow${sel === it.id ? ' sel' : ''}${who.length ? '' : ' none'}`}
-              aria-pressed={sel === it.id}
-              onClick={() => onSelect(sel === it.id ? null : it.id)}
-            >
-              <span className="nm">{it.name || 'Item'}</span>
-              <span className="who">
-                {who.map((id) => (
-                  <Avatar key={id} name={nameOf(state, id)} small />
-                ))}
-              </span>
-              <span className="pr">{fmt(it.cents)}</span>
-            </button>
+            <fieldset key={it.id} className={`arow${on ? ' sel' : ''}${who.length ? '' : ' none'}`}>
+              <legend className="sr">{`${it.name || 'Item'}, ${fmt(it.cents)}`}</legend>
+              <button
+                type="button"
+                id={`arow-${it.id}`}
+                className="pick"
+                aria-pressed={on}
+                onClick={() => pickItem(it.id)}
+              >
+                <span className="nm">{it.name || 'Item'}</span>
+                <span className="who" aria-hidden="true">
+                  {who.map((id) => (
+                    <Avatar key={id} name={nameOf(state, id)} small />
+                  ))}
+                </span>
+                <span className="pr">{fmt(it.cents)}</span>
+                <span className="sr">
+                  {names.length ? `. Shared by ${names.join(', ')}` : '. Not assigned'}
+                </span>
+              </button>
+              {parties.length > 1 && (
+                <button
+                  type="button"
+                  className="ghost small all"
+                  aria-label={`Split ${it.name || 'item'} among everyone`}
+                  onClick={() => dispatch({ type: 'setWho', itemId: it.id, who: everyone })}
+                >
+                  All
+                </button>
+              )}
+            </fieldset>
           );
         })}
       </div>
-      <div className="btns pad">
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => dispatch({ type: 'assignAll', ids: parties.map((p) => p.id) })}
-        >
-          Everyone shares everything
-        </button>
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => {
-            dispatch({ type: 'clearAssign' });
-            onSelect(null);
-          }}
-        >
-          Clear all
-        </button>
-      </div>
 
-      {selItem && (
-        <div className="picker">
+      {bill.items.length > 0 && (
+        <div className="btns pad">
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              dispatch({ type: 'assignAll', ids: everyone });
+              undoable('Everyone shares everything');
+            }}
+          >
+            Everyone shares everything
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              dispatch({ type: 'clearAssign' });
+              setPicked([]);
+              undoable('Cleared all assignments');
+            }}
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {sel.length > 0 && (
+        <section className="picker" aria-label="Who had it?" ref={pickerRef}>
           <div className="ph">
             <b>
-              {selItem.name || 'Item'} · {fmt(selItem.cents)}
+              {sel.length === 1
+                ? `${sel[0].name || 'Item'} · ${fmt(sel[0].cents)}`
+                : `${sel.length} items · ${fmt(selTotal)}`}
             </b>
             <span>
               <button
@@ -102,35 +212,51 @@ export function AssignView({ sel, onSelect }: Props) {
                 className="ghost small"
                 onClick={() =>
                   dispatch({
-                    type: 'setWho',
-                    itemId: selItem.id,
-                    who: everyone ? [] : parties.map((p) => p.id),
+                    type: 'setWhoMany',
+                    itemIds: sel.map((i) => i.id),
+                    who: everyoneOnSel ? [] : everyone,
                   })
                 }
               >
-                {everyone ? 'None' : 'Everyone'}
-              </button>{' '}
-              <button type="button" className="primary small" onClick={next}>
-                Next ›
+                {everyoneOnSel ? 'None' : 'Everyone'}
               </button>
+              {sel.length === 1 ? (
+                <button type="button" className="primary small" onClick={next}>
+                  Next ›
+                </button>
+              ) : (
+                <button type="button" className="primary small" onClick={() => setPicked([])}>
+                  Done
+                </button>
+              )}
             </span>
           </div>
           <div className="chips">
-            {parties.map((p) => (
-              <button
-                type="button"
-                key={p.id}
-                className={`chip${selItem.who.includes(p.id) ? ' on' : ''}`}
-                aria-pressed={selItem.who.includes(p.id)}
-                onClick={() => dispatch({ type: 'toggleWho', itemId: selItem.id, partyId: p.id })}
-              >
-                <Avatar name={p.name} />
-                {p.name}
-                {p.me ? ' (me)' : ''}
-              </button>
-            ))}
+            {parties.map((p) => {
+              const all = allHave(p.id);
+              const mixed = !all && someHave(p.id);
+              return (
+                <button
+                  type="button"
+                  key={p.id}
+                  className={`chip${all ? ' on' : ''}${mixed ? ' mixed' : ''}`}
+                  aria-pressed={all ? true : mixed ? 'mixed' : false}
+                  onClick={() =>
+                    dispatch({
+                      type: 'toggleWhoMany',
+                      itemIds: sel.map((i) => i.id),
+                      partyId: p.id,
+                    })
+                  }
+                >
+                  <Avatar name={p.name} />
+                  {p.name}
+                  {p.me ? ' (me)' : ''}
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </section>
       )}
     </>
   );

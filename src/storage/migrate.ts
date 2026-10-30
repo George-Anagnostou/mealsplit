@@ -1,7 +1,15 @@
 import { defaultState, newBill } from '../state/defaults';
 import { HISTORY_LIMIT } from '../state/history';
 import { todayISO, uid } from '../state/ids';
-import { type AppState, type Bill, type Friend, ME, type Meal, TABS } from '../state/types';
+import {
+  type AppState,
+  type Bill,
+  EDITABLE_FIELDS,
+  type Friend,
+  ME,
+  type Meal,
+  TABS,
+} from '../state/types';
 
 /** Bump this when the saved shape changes, and add a migration from the old version. */
 export const CURRENT_VERSION = 2;
@@ -74,6 +82,8 @@ function bill(v: unknown, people: Friend[], ctx: Ctx): Bill {
       typeof src.parsedTotalC === 'number' && Number.isFinite(src.parsedTotalC)
         ? src.parsedTotalC
         : null,
+    // Added after v2 shipped, with an empty default, so older saves load unchanged.
+    edited: EDITABLE_FIELDS.filter((f) => strings(src.edited).includes(f)),
   };
 }
 
@@ -109,6 +119,7 @@ export function normalizeState(raw: unknown, ctx: Ctx = defaultCtx()): AppState 
     bill: bill(src.bill, people, ctx),
     history: history(src.history, ctx),
     tab: TABS.find((t) => t === src.tab) ?? base.tab,
+    undo: [],
   };
 }
 
