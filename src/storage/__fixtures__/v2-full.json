@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "data": {
+    "me": { "name": "George", "venmo": "george-a", "contact": "" },
+    "people": [{ "id": "sam1", "name": "Sam", "venmo": "sam-w", "contact": "" }],
+    "bill": {
+      "id": "b-now",
+      "title": "Ramen",
+      "date": "2026-10-30",
+      "raw": "",
+      "items": [{ "id": "i1", "name": "Tonkotsu", "cents": 1800, "who": ["me", "sam1"] }],
+      "taxC": 150,
+      "feesC": 0,
+      "discountC": 0,
+      "tipMode": "pct",
+      "tipPct": 20,
+      "tipAmtC": 0,
+      "feesEven": false,
+      "here": ["sam1"],
+      "parsedTotalC": null
+    },
+    "history": [
+      {
+        "savedAt": 1790000000000,
+        "people": [{ "id": "sam1", "name": "Sam", "venmo": "sam-w", "contact": "" }],
+        "bill": {
+          "id": "b-old",
+          "title": "Tacos",
+          "date": "2026-10-20",
+          "raw": "",
+          "items": [{ "id": "t1", "name": "Al pastor", "cents": 1400, "who": ["sam1"] }],
+          "taxC": 0, "feesC": 0, "discountC": 0, "tipMode": "pct", "tipPct": 0, "tipAmtC": 0,
+          "feesEven": false, "here": ["sam1"], "parsedTotalC": null
+        }
+      }
+    ],
+    "tab": "split"
+  }
+}

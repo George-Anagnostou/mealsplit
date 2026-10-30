@@ -1,6 +1,6 @@
 # mealsplit
 
-A tiny static web app for splitting a food bill with friends and requesting payment. No backend, no accounts. Everything (friends, current bill) stays in your browser's localStorage.
+A tiny static web app for splitting a food bill with friends and requesting payment. No backend, no accounts. Everything (your details, friends, current bill, recent meals) stays in your browser's localStorage.
 
 ![mealsplit on a phone](screenshot.png)
 
@@ -14,6 +14,8 @@ A tiny static web app for splitting a food bill with friends and requesting paym
    - **Text · Apple Cash**: opens Messages with a prefilled `sms:` message
    - **Copy · Zelle** / **Copy message**: clipboard text (Zelle has no request deep links)
    - **Copy summary for the group**
+   - **Save to history**: keeps this meal in the list on the History tab
+5. **History**: your last 20 meals (date, place or first item, total, people). Tap one to re-open it read-only, or duplicate it into a new bill. Also home to **Your data**: export, import, clear all.
 
 Tax, tip and discounts are allocated in proportion to each person's item subtotal; fees can instead be split evenly. Cents are allocated with the largest-remainder method, so the shares always add up to exactly the receipt total.
 
@@ -37,7 +39,7 @@ CI (`.github/workflows/ci.yml`) runs typecheck, lint, unit tests, a build and th
 
 ## Test
 
-Vitest covers the pure core: the split math (proportional tax/tip, shared items, penny reconciliation, edge cases), the receipt parser on seven sample receipts (`src/core/__fixtures__/receipts/`, including an `edge-cases.txt` of known probes), the link/message builders, and money formatting. Tests sit next to the code as `*.test.ts`. `npm run test:coverage` enforces thresholds on `src/core` (see `vite.config.ts`).
+Vitest covers the pure core and the state and storage layers (reducer actions, history cap, migrations from v1 fixtures in `src/storage/__fixtures__/`, corrupt and future data, the export/import round trip, and save failures against a storage that throws). It also covers: the split math (proportional tax/tip, shared items, penny reconciliation, edge cases), the receipt parser on seven sample receipts (`src/core/__fixtures__/receipts/`, including an `edge-cases.txt` of known probes), the link/message builders, and money formatting. Tests sit next to the code as `*.test.ts`. `npm run test:coverage` enforces thresholds on `src/core` (see `vite.config.ts`).
 
 The parser gives every item a `confidence` (0 to 1) and typed `reasons`. Items below `LOW_CONFIDENCE` get a subtle highlight in the item list until you edit them. The rules for what counts as a fee, a discount, or an item are documented at the top of `src/core/parser.ts`.
 
@@ -52,6 +54,8 @@ npm run test:e2e -- --project=iphone-webkit          # one browser
 npx playwright show-report                           # after a failure
 ```
 
+`e2e/storage.spec.ts` seeds old v1 localStorage and checks it migrates, then covers history (save, re-open read-only, duplicate, the 20 cap), New bill keeping friends ticked, corrupt and future data, a full-storage notice, tab persistence, and export, import and clear all.
+
 `e2e/payments.spec.ts` covers the "owes nothing" state, the discount cap warning, and the Split-tab check against the receipt's own total.
 
 ### Payments and manual checks
@@ -60,6 +64,19 @@ npx playwright show-report                           # after a failure
 - A discount larger than the item subtotal is capped at the subtotal, with a visible warning. What you typed is kept.
 - The check line on the Split tab compares against the receipt's parsed total; with no parsed total it says so rather than showing a tick.
 - Real-phone checks (Venmo deep links, Messages, Add to Home Screen, offline, dark mode) are in [`docs/IPHONE_CHECKLIST.md`](docs/IPHONE_CHECKLIST.md).
+
+## Saved data
+
+All of it lives on your device, in `localStorage`, and only `src/storage/` touches it (a unit test enforces that).
+
+- **What is kept:** your payment details, saved friends (with their handles), the current bill, the last 20 meals, and which tab you were on.
+- **New bill** saves the current bill to history (empty bills are skipped) and starts a fresh one **with the same friends ticked**: the same people usually eat together, so you only change what is different. Friends are never removed by a new bill.
+- **History** keeps one entry per bill (saving again updates it), newest first, capped at 20. Each meal remembers the friends who were there, so it still reads correctly if you delete a friend later.
+- **Format:** a versioned envelope `{ "version": 2, "data": { me, people, bill, history, tab } }` under the key `mealsplit`. `src/storage/migrate.ts` has the migrations (v1 to v2 so far) and a deep, safe merge with defaults, so data missing keys never shows "undefined".
+- **Upgrading from v1:** the old unversioned `mealsplit.v1` key is read once and migrated. It is left in place as a rollback copy and ignored once the new key exists.
+- **Bad data never crashes the app.** If saved data is corrupt, or comes from a newer version of the app, a copy is stored under `mealsplit.backup`, the app starts fresh, and a dismissible notice says so (the copy can be downloaded from History → Your data).
+- **If saving fails** (storage full, private mode) a small dismissible notice says changes aren't being kept and suggests exporting.
+- **Export / import:** Export downloads `mealsplit-YYYY-MM-DD.json` (`{ app, version, exportedAt, data }`). Import validates and migrates a file (older versions are fine, newer ones are refused), shows what it contains, and asks before replacing anything. **Clear all data** asks first, then wipes every key and resets.
 
 ## Layout
 
@@ -71,11 +88,12 @@ src/core/                   pure logic, no DOM or storage; fully unit-tested
   split.ts                  split math (largest-remainder allocation)
   parser.ts                 receipt text → items + totals
   links.ts                  Venmo / sms: links and message text
-src/state/                  app state: types, reducer, selectors, localStorage, context
+src/state/                  app state: types, defaults, pure reducer and selectors, history rules, React context
+src/storage/                the only code that touches localStorage: migrations, export/import, adapter
 src/ocr/                    photo → text (tesseract.js, loaded on demand)
 src/ui/                     React components: one view per tab, plus small shared pieces
 src/main.tsx  src/styles.css
-e2e/                        Playwright smoke test (playwright.config.ts at the root)
+e2e/                        Playwright tests (playwright.config.ts at the root)
 ```
 
 ## Limits

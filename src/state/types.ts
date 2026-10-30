@@ -24,6 +24,8 @@ export interface Me {
 }
 
 export interface Bill {
+  /** Stable id: saving the same bill to history twice updates one entry. */
+  id: string;
   title: string;
   /** ISO date, yyyy-mm-dd */
   date: string;
@@ -42,10 +44,25 @@ export interface Bill {
   parsedTotalC: number | null;
 }
 
-export interface AppState {
-  me: Me;
-  people: Friend[];
+/** A finished (or abandoned) bill kept in history, with the friends who were at it. */
+export interface Meal {
+  /** Epoch ms when it was last saved. */
+  savedAt: number;
   bill: Bill;
+  /** Snapshot of the friends at this meal, so it still reads right if they are deleted later. */
+  people: Friend[];
 }
 
-export type Tab = 'receipt' | 'people' | 'assign' | 'split';
+export type Tab = 'receipt' | 'people' | 'assign' | 'split' | 'history';
+export const TABS: readonly Tab[] = ['receipt', 'people', 'assign', 'split', 'history'];
+
+export interface AppState {
+  me: Me;
+  /** Saved friends, with their payment handles. */
+  people: Friend[];
+  bill: Bill;
+  /** Newest first, at most `HISTORY_LIMIT`. */
+  history: Meal[];
+  /** The tab you were on, so the app reopens where you left it. */
+  tab: Tab;
+}
