@@ -79,6 +79,15 @@ Tap **Copy · Zelle**.
 - [ ] Settings → Accessibility → Motion → Reduce Motion: no sliding or smooth scrolling in the app.
 - [ ] Settings → Display → Text Size larger: the layout still works, with nothing cut off.
 
+## 9. Scan a photo (OCR)
+- [ ] Tap **Scan photo**, then **Photo Library**, and pick a HEIC photo of a receipt (a normal iPhone photo). It scans without a "can't read that image" error.
+- [ ] While it runs you see a progress bar with plain wording (Loading…, then Reading receipt…) and a **Cancel** button.
+- [ ] A receipt photo taken in portrait, and one taken in landscape, both read upright (the items appear in order).
+- [ ] The items fill in, the toast says how many were found, and the status line reminds you to check digits and totals.
+- [ ] Tap **Cancel** halfway: it says "Scan cancelled", the text box is untouched, and you can scan again.
+- [ ] Turn on Airplane Mode and scan after you have scanned once while online: note whether it works (the files are cached the first time they load). Scanning for the first time while offline should fail with a clear message, and pasting text still works.
+- [ ] Time a scan on your phone, from picking the photo to "Done": ______ seconds (first scan) and ______ seconds (second scan).
+
 ---
 
 **Tested on:** ______ (date) · iOS ______ · build / commit ______ · notes:
