@@ -54,6 +54,7 @@ button[disabled] { opacity: .5; }
 
 .itemrow { display: grid; grid-template-columns: 1fr 92px 34px; gap: 8px; align-items: center; margin-bottom: 8px; }
 .itemrow input { margin: 0; }
+.itemrow.lowconf input { border-color: var(--warn); background: var(--warn-bg); }
 .itemrow .price { text-align: right; font-variant-numeric: tabular-nums; }
 .x { padding: 6px; width: 34px; height: 34px; color: var(--muted); border-radius: 50%; }
 .tipbox { display: flex; gap: 6px; align-items: center; }

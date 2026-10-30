@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { dollars, fmt, toCents } from '../core/money';
-import { parseReceipt } from '../core/parser';
+import { isLowConfidence, parseReceipt } from '../core/parser';
 import { scanReceipt } from '../ocr/ocr';
 import { uid } from '../state/ids';
 import { grandTotalOf, subtotalOf, tipOf } from '../state/selectors';
@@ -85,12 +85,23 @@ export function ReceiptView({ onItemsReset }: Props) {
   const dispatch = useDispatch();
   const toast = useToast();
   const [warnings, setWarnings] = useState<string[]>([]);
+  // Rows the parser was unsure about. Transient on purpose (not saved); a row is cleared once edited.
+  const [unsure, setUnsure] = useState<Set<string>>(new Set());
+  const settle = (id: string) =>
+    setUnsure((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   const focusItem = useRef<string | null>(null);
   const [ocr, setOcr] = useState<{ message: string; progress?: number } | null>(null);
 
   const parse = (text: string) => {
     const parsed = parseReceipt(text);
-    dispatch({ type: 'applyParsed', parsed, ids: parsed.items.map(uid) });
+    const ids = parsed.items.map(uid);
+    dispatch({ type: 'applyParsed', parsed, ids });
+    setUnsure(new Set(ids.filter((_, i) => isLowConfidence(parsed.items[i]))));
     setWarnings(parsed.warnings);
     onItemsReset();
     const n = parsed.items.length;
@@ -189,7 +200,13 @@ export function ReceiptView({ onItemsReset }: Props) {
         <h2>Items</h2>
         {bill.items.length ? (
           bill.items.map((it) => (
-            <div className="itemrow" key={it.id}>
+            <div
+              className={unsure.has(it.id) ? 'itemrow lowconf' : 'itemrow'}
+              key={it.id}
+              title={
+                unsure.has(it.id) ? 'Not sure I read this line right. Please check it.' : undefined
+              }
+            >
               <input
                 className="nm"
                 ref={(el) => {
@@ -201,9 +218,10 @@ export function ReceiptView({ onItemsReset }: Props) {
                 value={it.name}
                 placeholder="Item"
                 aria-label="Item name"
-                onChange={(e) =>
-                  dispatch({ type: 'editItem', id: it.id, patch: { name: e.target.value } })
-                }
+                onChange={(e) => {
+                  settle(it.id);
+                  dispatch({ type: 'editItem', id: it.id, patch: { name: e.target.value } });
+                }}
               />
               <DecimalInput
                 className="price"
@@ -212,7 +230,10 @@ export function ReceiptView({ onItemsReset }: Props) {
                 value={it.cents}
                 parse={toCents}
                 format={moneyFormat}
-                onValue={(cents) => dispatch({ type: 'editItem', id: it.id, patch: { cents } })}
+                onValue={(cents) => {
+                  settle(it.id);
+                  dispatch({ type: 'editItem', id: it.id, patch: { cents } });
+                }}
               />
               <button
                 type="button"
