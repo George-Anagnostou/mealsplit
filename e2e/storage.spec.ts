@@ -216,6 +216,8 @@ test.describe('history', () => {
   });
 
   test('only the last 20 meals are kept', async ({ page }) => {
+    // 22 bills through the real UI: ~20s in WebKit on a busy machine, close to the 30s default.
+    test.slow();
     await page.goto('/');
     for (let n = 1; n <= 22; n++) {
       await parseText(page, `Meal ${n} ${n}.00`);
