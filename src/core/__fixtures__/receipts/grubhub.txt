@@ -1,0 +1,32 @@
+Grubhub
+Your order from Pho 99
+Order #: 4471-0238-91
+
+Order Summary
+1x Chicken Pad See Ew
+$15.95
+1x Spring Rolls (4)
+$6.50
+2x Thai Iced Tea
+$7.00
+1x Delivery Pizza Combo
+$11.00
+1x Bag of Chips
+$2.00
+
+Subtotal
+$42.45
+Delivery Fee
+$3.99
+Service Fee
+$2.95
+Sales Tax
+$3.71
+Driver Tip
+$6.00
+Promo (GRUBHUB10)
+-$10.00
+Total
+$49.10
+
+Paid with Mastercard ending in 3317
