@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { isLowConfidence, parseReceipt } from '../core/parser';
-import { scanReceipt } from '../ocr/ocr';
+import { ScanCancelled, scanReceipt } from '../ocr/ocr';
 import { uid } from '../state/ids';
 import { keptEdits } from '../state/reducer';
 import { describeFields } from '../state/selectors';
@@ -31,7 +31,10 @@ export function ReceiptInput({ onUnsure }: Props) {
   const dispatch = useDispatch();
   const toast = useToast();
   const [warnings, setWarnings] = useState<string[]>([]);
-  const [ocr, setOcr] = useState<{ message: string; progress?: number } | null>(null);
+  const [ocr, setOcr] = useState<{ message: string; progress?: number; busy?: boolean } | null>(
+    null,
+  );
+  const scan = useRef<AbortController | null>(null);
 
   const parse = (text: string) => {
     const parsed = parseReceipt(text);
@@ -57,16 +60,33 @@ export function ReceiptInput({ onUnsure }: Props) {
   };
 
   const onPhoto = async (file: File) => {
+    scan.current?.abort();
+    const ctl = new AbortController();
+    scan.current = ctl;
     try {
-      const text = await scanReceipt(file, (message, progress) => setOcr({ message, progress }));
+      const text = await scanReceipt(
+        file,
+        (p) => {
+          if (!ctl.signal.aborted) setOcr({ ...p, busy: true });
+        },
+        ctl.signal,
+      );
       dispatch({ type: 'meta', field: 'raw', value: text });
       parse(text);
       setOcr({ message: 'Done. OCR can misread digits, so check each item and the totals below.' });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setOcr({ message: `Scan failed: ${msg}. You can still paste the text.` });
+      if (err instanceof ScanCancelled) {
+        setOcr({ message: 'Scan cancelled. You can still paste the text.' });
+      } else {
+        const msg = err instanceof Error ? err.message : String(err);
+        setOcr({ message: `Scan failed. ${msg} You can still paste the text.` });
+      }
+    } finally {
+      if (scan.current === ctl) scan.current = null;
     }
   };
+
+  const scanning = ocr?.busy === true;
 
   return (
     <div className="card">
@@ -82,12 +102,13 @@ export function ReceiptInput({ onUnsure }: Props) {
         <button type="button" className="primary" onClick={() => parse(bill.raw)}>
           Parse text
         </button>
-        <label className="btn">
+        <label className="btn" aria-disabled={scanning}>
           📷 Scan photo
           <input
             type="file"
             accept="image/*"
             className="sr"
+            disabled={scanning}
             onChange={(e) => {
               const f = e.target.files?.[0];
               e.target.value = '';
@@ -100,8 +121,15 @@ export function ReceiptInput({ onUnsure }: Props) {
         </button>
       </div>
       {ocr && (
-        <div className="status">
-          {ocr.message}
+        <div className="status" role="status" aria-live="polite">
+          <div className="statusrow">
+            <span>{ocr.message}</span>
+            {scanning && (
+              <button type="button" className="ghost" onClick={() => scan.current?.abort()}>
+                Cancel
+              </button>
+            )}
+          </div>
           {ocr.progress != null && (
             <div
               className="progress"
