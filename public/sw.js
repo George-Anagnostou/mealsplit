@@ -1,6 +1,7 @@
 // Offline app shell. OCR (tesseract.js from CDN) still needs a network connection.
-const CACHE = 'mealsplit-v1';
-const SHELL = ['./', 'index.html', 'css/styles.css', 'js/app.js', 'js/split.js', 'js/parser.js', 'js/links.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
+const CACHE = 'mealsplit-v2';
+// Built JS/CSS have hashed names, so they're cached at runtime by the fetch handler below.
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });

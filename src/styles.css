@@ -129,3 +129,6 @@ button[disabled] { opacity: .5; }
 .btn.venmo { flex: 1 1 100%; font-size: 16px; padding: 12px 14px; text-align: center; }
 .pcard .btns button.grow, .pcard .btns .btn.grow:not(.venmo) { flex: 1 1 40%; }
 .pcard .btns .btn.venmo { flex: 1 1 100%; }
+
+/* assign rows are buttons now: reset the generic button look */
+.arow { width: 100%; text-align: left; justify-content: flex-start; font: inherit; color: var(--text); }
