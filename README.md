@@ -52,6 +52,15 @@ npm run test:e2e -- --project=iphone-webkit          # one browser
 npx playwright show-report                           # after a failure
 ```
 
+`e2e/payments.spec.ts` covers the "owes nothing" state, the discount cap warning, and the Split-tab check against the receipt's own total.
+
+### Payments and manual checks
+
+- Nobody who owes $0 or less gets a Venmo, Apple Cash or Zelle request; their card says so instead. Links are built from cleaned input (Venmo username, phone number, note) and always percent-encoded.
+- A discount larger than the item subtotal is capped at the subtotal, with a visible warning. What you typed is kept.
+- The check line on the Split tab compares against the receipt's parsed total; with no parsed total it says so rather than showing a tick.
+- Real-phone checks (Venmo deep links, Messages, Add to Home Screen, offline, dark mode) are in [`docs/IPHONE_CHECKLIST.md`](docs/IPHONE_CHECKLIST.md).
+
 ## Layout
 
 ```

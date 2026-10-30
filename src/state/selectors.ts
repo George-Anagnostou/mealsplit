@@ -1,5 +1,11 @@
 import { billNote } from '../core/links';
-import { computeSplit, computeTip, type SplitOptions, type SplitResult } from '../core/split';
+import {
+  clampDiscount,
+  computeSplit,
+  computeTip,
+  type SplitOptions,
+  type SplitResult,
+} from '../core/split';
 import { type AppState, type Bill, type Friend, ME } from './types';
 
 export interface Party {
@@ -24,7 +30,7 @@ export const subtotalOf = (b: Bill): number => b.items.reduce((a, i) => a + (i.c
 export const tipOf = (b: Bill): number => computeTip(subtotalOf(b), b.tipMode, b.tipPct, b.tipAmtC);
 export const noteOf = (b: Bill): string => billNote(b.title || 'Dinner', b.date);
 export const grandTotalOf = (b: Bill): number =>
-  subtotalOf(b) + b.taxC + tipOf(b) + b.feesC - b.discountC;
+  subtotalOf(b) + b.taxC + tipOf(b) + b.feesC - clampDiscount(b.discountC, subtotalOf(b));
 
 /** Only people who are present count as assignees. */
 export const presentWho = (b: Bill, who: string[]): string[] =>

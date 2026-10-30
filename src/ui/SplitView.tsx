@@ -1,6 +1,7 @@
 import {
   billNote,
   groupSummary,
+  owesNothing,
   shareMessage,
   smsLink,
   venmoAppLink,
@@ -8,7 +9,7 @@ import {
   zelleMessage,
 } from '../core/links';
 import { fmt } from '../core/money';
-import { type PartyTotals, UNASSIGNED } from '../core/split';
+import { discountNotice, type PartyTotals, reconcile, UNASSIGNED } from '../core/split';
 import { computeBill, partiesOf } from '../state/selectors';
 import { useAppState } from '../state/store';
 import { type AppState, type Friend, ME } from '../state/types';
@@ -36,7 +37,12 @@ function PartyCard({ name, totals, friend, note, state }: CardProps) {
   ).filter(([, v]) => v);
 
   let actions = null;
-  if (friend) {
+  if (owesNothing(totals.totalC)) {
+    // No Venmo, Apple Cash or Zelle request for a $0 share (and none for yourself).
+    actions = (
+      <div className="owes0">{isMe ? 'You owe nothing.' : 'Owes nothing. No request needed.'}</div>
+    );
+  } else if (friend) {
     const { me } = state;
     const msg = shareMessage({ name: friend.name, cents: totals.totalC, note, me });
     const zelle = zelleMessage({ name: friend.name, cents: totals.totalC, note, me });
@@ -115,7 +121,8 @@ export function SplitView() {
     }));
   const meTotals = r.parties[ME];
   const meName = me.name || 'Me';
-  const reconOk = r.totalC === r.expectedTotalC;
+  const recon = reconcile(r.totalC, bill.parsedTotalC);
+  const notice = discountNotice(bill.discountC, r.subtotalC);
 
   const summary = () =>
     groupSummary({
@@ -127,6 +134,7 @@ export function SplitView() {
 
   return (
     <div>
+      {notice && <div className="banner warn">{notice}</div>}
       {unassigned && (
         <div className="banner warn">
           {unassigned.count} item{unassigned.count > 1 ? 's' : ''} ({fmt(unassigned.totalC)} with
@@ -156,10 +164,17 @@ export function SplitView() {
       {meTotals && (
         <PartyCard name={`${meName} (me)`} totals={meTotals} note={note} state={state} />
       )}
-      <div className={`recon ${reconOk ? 'ok' : 'bad'}`}>
-        Shares add up to <b>{fmt(r.totalC)}</b> · receipt total <b>{fmt(r.expectedTotalC)}</b>{' '}
-        {reconOk ? '✓' : '⚠'}
-      </div>
+      {recon.status === 'unknown' ? (
+        <div className="recon">
+          Shares add up to <b>{fmt(r.totalC)}</b> · no receipt total to check against
+        </div>
+      ) : (
+        <div className={`recon ${recon.status === 'match' ? 'ok' : 'bad'}`}>
+          Shares add up to <b>{fmt(r.totalC)}</b> · receipt total{' '}
+          <b>{fmt(bill.parsedTotalC ?? 0)}</b>{' '}
+          {recon.status === 'match' ? '✓' : `⚠ off by ${fmt(Math.abs(recon.diffC))}`}
+        </div>
+      )}
     </div>
   );
 }
