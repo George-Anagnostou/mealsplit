@@ -68,7 +68,7 @@ function PartyCard({ name, totals, friend, note, state }: CardProps) {
   return (
     <div className={`card pcard${isMe ? ' me' : ''}`}>
       <h3>
-        <Avatar name={name} />
+        <Avatar name={name.replace(/ \(me\)$/, '')} />
         {name}
         <span className="big">{fmt(totals.totalC)}</span>
       </h3>
