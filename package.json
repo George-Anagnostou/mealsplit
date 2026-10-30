@@ -3,9 +3,32 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Tiny static bill-splitting app: parse a receipt, assign items, request payment.",
+  "description": "Tiny bill-splitting PWA: parse a receipt, assign items, request payment.",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "test": "node --test test/",
-    "serve": "python3 -m http.server 8080"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm run test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "4.1.12"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   }
 }
