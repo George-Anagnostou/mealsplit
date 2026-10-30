@@ -13,7 +13,7 @@ async function ready(page: Page) {
 }
 
 const row = (page: Page, name: string) => page.getByRole('group', { name: new RegExp(name) });
-const toast = (page: Page) => page.getByRole('status').filter({ hasText: /\S/ });
+const toast = (page: Page) => page.locator('.toastwrap');
 
 test('the step bar shows where you are, and Back / Next walk the flow', async ({ page }) => {
   await page.goto('/');
@@ -190,4 +190,32 @@ test('every control is at least 44px tall', async ({ page }) => {
       );
     expect(small, `${step}: ${small.join('; ')}`).toEqual([]);
   }
+});
+
+test('toasts sit above Back/Next and the picker, never over a heading', async ({ page }) => {
+  await ready(page);
+  const box = async (sel: string) => {
+    const b = await page.locator(sel).first().boundingBox();
+    if (!b) throw new Error(`${sel} is not visible`);
+    return b;
+  };
+
+  await page.getByRole('button', { name: 'Everyone shares everything' }).click();
+  await expect(toast(page)).toContainText('Everyone shares everything');
+  let t = await box('.toast');
+  expect(t.y + t.height).toBeLessThanOrEqual((await box('.flowbar')).y);
+  const flow = await box('.flowbar');
+  // Close to the bottom bar (within a toast and a gap), nowhere near the headings.
+  expect(flow.y - (t.y + t.height)).toBeLessThan(24);
+
+  // With the picker open, the toast moves up above it.
+  await page.getByRole('button', { name: 'Clear all' }).click();
+  await row(page, 'Soda').getByRole('button').first().click();
+  await expect(page.locator('.picker')).toBeVisible();
+  await page.getByRole('button', { name: 'Everyone shares everything' }).click();
+  await expect(toast(page)).toContainText('Everyone shares everything');
+  t = await box('.toast');
+  const picker = await box('.picker');
+  expect(t.y + t.height).toBeLessThanOrEqual(picker.y);
+  expect(picker.y - (t.y + t.height)).toBeLessThan(24);
 });

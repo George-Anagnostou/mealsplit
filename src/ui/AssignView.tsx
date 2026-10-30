@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fmt } from '../core/money';
 import { unassignedItems } from '../state/flow';
 import { nameOf, partiesOf, presentWho } from '../state/selectors';
@@ -29,6 +29,23 @@ export function AssignView() {
   const sel = bill.items.filter((it) => picked.includes(it.id));
   const selTotal = sel.reduce((n, it) => n + it.cents, 0);
   const canUndo = state.undo.length > 0;
+  const pickerRef = useRef<HTMLElement>(null);
+  const pickerOpen = sel.length > 0;
+
+  // Publish the picker's height so the toast (and the page bottom padding) can sit above it.
+  useEffect(() => {
+    const el = pickerRef.current;
+    if (!pickerOpen || !el) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty('--picker-h', `${el.offsetHeight}px`);
+    publish();
+    const watch = new ResizeObserver(publish);
+    watch.observe(el);
+    return () => {
+      watch.disconnect();
+      root.style.removeProperty('--picker-h');
+    };
+  }, [pickerOpen]);
   const undo = () => dispatch({ type: 'undo' });
   const undoable = (message: string) => toast(message, { label: 'Undo', onClick: undo });
 
@@ -182,7 +199,7 @@ export function AssignView() {
       )}
 
       {sel.length > 0 && (
-        <section className="picker" aria-label="Who had it?">
+        <section className="picker" aria-label="Who had it?" ref={pickerRef}>
           <div className="ph">
             <b>
               {sel.length === 1

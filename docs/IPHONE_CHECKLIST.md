@@ -74,6 +74,7 @@ Tap **Copy · Zelle**.
 - [ ] Assign: tap an item and the people panel opens above Back / Next without covering the item list's end. Turn on **Select several**, tap two items, tap a person: both get them. **All** on a row, **Split the rest among everyone**, and **Undo** (button and toast) all behave.
 - [ ] Next on Assign reads **Split anyway** while anything is unassigned, and the Split step shows a warning with an **Assign it** button.
 - [ ] Type a Tax and a Tip, then parse the receipt again: they stay, marked **edited**, and the toast says so. **Let parsing replace it** hands them back.
+- [ ] Toasts (Undo, "Split the rest…") appear at the bottom, just above Back / Next (above the people panel when it is open), clear of the home indicator, and never cover a step heading.
 - [ ] Turn on VoiceOver: step bar buttons read "current step"; each item reads its name, price and who shares it; the toast is announced.
 - [ ] Settings → Accessibility → Motion → Reduce Motion: no sliding or smooth scrolling in the app.
 - [ ] Settings → Display → Text Size larger: the layout still works, with nothing cut off.
