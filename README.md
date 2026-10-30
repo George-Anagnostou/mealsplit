@@ -31,13 +31,24 @@ npm run preview   # serve dist/ locally, including the service worker
 
 On iPhone: open the served page, then Share → Add to Home Screen. The service worker only registers in production builds (`build` + `preview`), so dev reloads are never cached.
 
-Other scripts: `npm test`, `npm run test:watch`, `npm run typecheck`, `npm run lint`, `npm run format` (Biome auto-fix).
+Other scripts: `npm run test:e2e` (see below), `npm test`, `npm run test:watch`, `npm run typecheck`, `npm run lint`, `npm run format` (Biome auto-fix).
 
-CI (`.github/workflows/ci.yml`) runs typecheck, lint, tests and a build on every pull request. It has read-only permissions, no secrets, and never deploys.
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, unit tests, a build and the e2e smoke test on every pull request (and on pushes to `main`). It has read-only permissions, no secrets, and never deploys.
 
 ## Test
 
 Vitest covers the pure core: the split math (proportional tax/tip, shared items, penny reconciliation, edge cases), the receipt parser on four realistic sample receipts (`src/core/__fixtures__/receipts/`), the link/message builders, and money formatting. Tests sit next to the code as `*.test.ts`.
+
+### End-to-end smoke test
+
+Playwright drives a production build (`vite preview`, port 4173, started automatically) on an iPhone 14 profile in **WebKit**, plus a Pixel 7 profile in Chromium. It walks Example receipt → friends → assign (with a shared item) → Split (shares add up, Venmo link recipient/amount), checks that a reload keeps state, that the manifest loads, and that the service worker registers and the shell loads offline.
+
+```sh
+npx playwright install --with-deps webkit chromium   # once; --with-deps needs sudo on Linux
+npm run test:e2e
+npm run test:e2e -- --project=iphone-webkit          # one browser
+npx playwright show-report                           # after a failure
+```
 
 ## Layout
 
@@ -53,6 +64,7 @@ src/state/                  app state: types, reducer, selectors, localStorage, 
 src/ocr/                    photo → text (tesseract.js, loaded on demand)
 src/ui/                     React components: one view per tab, plus small shared pieces
 src/main.tsx  src/styles.css
+e2e/                        Playwright smoke test (playwright.config.ts at the root)
 ```
 
 ## Limits
