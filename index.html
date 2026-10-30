@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>mealsplit</title>
+  <meta name="description" content="Split a food bill: parse the receipt, assign items, request payment.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="mealsplit">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">meal<b>split</b></div>
+    <button class="ghost small" id="newBill">New bill</button>
+  </header>
+
+  <main id="main">
+    <!-- 1. RECEIPT -->
+    <section id="tab-receipt" class="tab">
+      <div class="card">
+        <div class="row two">
+          <label>What was it?<input id="title" placeholder="Tacos" autocomplete="off"></label>
+          <label>Date<input id="date" type="date"></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Receipt</h2>
+        <textarea id="raw" rows="5" placeholder="Paste receipt text here…"></textarea>
+        <div class="btns">
+          <button class="primary" id="parseBtn">Parse text</button>
+          <label class="btn" id="scanLabel">📷 Scan photo
+            <input type="file" id="photo" accept="image/*" hidden>
+          </label>
+          <button class="ghost" id="exampleBtn">Example</button>
+        </div>
+        <div id="ocrStatus" class="status" hidden></div>
+        <div id="parseWarn" class="warn" hidden></div>
+      </div>
+
+      <div class="card">
+        <h2>Items</h2>
+        <div id="itemsEdit"></div>
+        <button class="ghost" id="addItem">＋ Add item</button>
+      </div>
+
+      <div class="card">
+        <h2>Tax, tip &amp; fees</h2>
+        <div class="grid">
+          <label>Tax<input id="tax" inputmode="decimal" placeholder="0.00"></label>
+          <label>Fees<input id="fees" inputmode="decimal" placeholder="0.00"></label>
+          <label>Discount<input id="discount" inputmode="decimal" placeholder="0.00"></label>
+          <label>Tip
+            <span class="tipbox">
+              <input id="tip" inputmode="decimal" placeholder="0">
+              <span class="seg" id="tipMode"><button data-mode="amt">$</button><button data-mode="pct">%</button></span>
+            </span>
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="feesEven"> Split fees evenly (instead of by what each person ordered)</label>
+        <div id="totalsBox" class="totals"></div>
+      </div>
+    </section>
+
+    <!-- 2. PEOPLE -->
+    <section id="tab-people" class="tab" hidden>
+      <div class="card">
+        <h2>Me</h2>
+        <p class="hint">You aren’t charged. These details go in the messages you send so friends know where to pay you.</p>
+        <div class="grid">
+          <label>Name<input id="meName" placeholder="George"></label>
+          <label>My Venmo<input id="meVenmo" placeholder="@username" autocapitalize="none"></label>
+          <label class="span">My Zelle / Apple Cash (phone or email)<input id="meContact" placeholder="optional"></label>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Friends</h2>
+        <p class="hint">Saved on this device. Tick who’s at this meal.</p>
+        <div id="friends"></div>
+        <form id="addFriend" class="addfriend" autocomplete="off">
+          <div class="grid">
+            <label>Name<input id="fName" placeholder="Sam" required></label>
+            <label>Venmo<input id="fVenmo" placeholder="@sam" autocapitalize="none"></label>
+            <label class="span">Phone or email (Zelle / Apple Cash)<input id="fContact" placeholder="optional"></label>
+          </div>
+          <button class="primary" type="submit">Add friend</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 3. ASSIGN -->
+    <section id="tab-assign" class="tab" hidden>
+      <div id="assignBanner"></div>
+      <div id="assignList"></div>
+      <div class="btns pad">
+        <button class="ghost" id="allEveryone">Everyone shares everything</button>
+        <button class="ghost" id="clearAssign">Clear all</button>
+      </div>
+    </section>
+
+    <!-- 4. SPLIT -->
+    <section id="tab-split" class="tab" hidden>
+      <div id="splitOut"></div>
+    </section>
+  </main>
+
+  <!-- chip picker for the selected item (Assign tab) -->
+  <div id="picker" class="picker" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="receipt" class="on"><i>🧾</i>Receipt</button>
+    <button data-tab="people"><i>👥</i>People</button>
+    <button data-tab="assign"><i>👆</i>Assign</button>
+    <button data-tab="split"><i>💸</i>Split</button>
+  </nav>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

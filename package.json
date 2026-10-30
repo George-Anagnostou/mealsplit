@@ -1,0 +1,11 @@
+{
+  "name": "mealsplit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tiny static bill-splitting app: parse a receipt, assign items, request payment.",
+  "scripts": {
+    "test": "node --test test/",
+    "serve": "python3 -m http.server 8080"
+  }
+}

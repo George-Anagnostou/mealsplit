@@ -1,0 +1,30 @@
+Order from Chipotle
+Order #4821-7731
+
+1x
+Burrito Bowl - Chicken
+$11.95
+2x
+Chips & Guacamole
+$8.90
+1x Kids Quesadilla
+$5.45
+1x Fountain Drink
+$2.99
+
+Subtotal
+$29.29
+Delivery Fee
+$1.99
+Service Fee
+$4.40
+Small Order Fee
+$0.00
+Estimated Tax
+$2.71
+Promo: DASH20
+-$5.00
+Dasher Tip
+$4.00
+Total
+$37.39

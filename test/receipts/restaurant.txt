@@ -1,0 +1,23 @@
+LA CANTINA TAQUERIA
+123 Mission St, San Francisco CA
+Table 12   Server: Maria   Guest 4
+10/30/2026 7:42 PM
+
+2 Carne Asada Taco        7.00
+1 Chicken Burrito        12.50
+Horchata                  3.75
+Guacamole & Chips         9.00
+1 Margarita              11.00
+Fish Tacos (3)           14.25
+
+Subtotal                 57.50
+Sales Tax 8.625%          4.96
+Total                    62.46
+
+Suggested Tip:
+18% = 10.35
+20% = 11.50
+22% = 12.65
+
+VISA ****1234            62.46
+Thank you!
