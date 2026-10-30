@@ -10,10 +10,10 @@ import {
 import { fmt } from '../core/money';
 import type { PartyTotals } from '../core/split';
 import { splitSummary } from '../state/selectors';
-import { useAppState, useDispatch } from '../state/store';
+import { useAppState } from '../state/store';
 import type { AppState, Friend } from '../state/types';
 import { Avatar } from './Avatar';
-import { useCopy, useToast } from './Toast';
+import { useCopy } from './Toast';
 
 interface CardProps {
   name: string;
@@ -72,11 +72,11 @@ function PartyCard({ name, totals, friend, note, state }: CardProps) {
 
   return (
     <div className={`card pcard${isMe ? ' me' : ''}`}>
-      <h3>
+      <h2>
         <Avatar name={name.replace(/ \(me\)$/, '')} />
         {name}
         <span className="big">{fmt(totals.totalC)}</span>
-      </h3>
+      </h2>
       <div className="lines">
         {totals.items.map((l) => (
           <div key={l.index}>
@@ -100,12 +100,12 @@ function PartyCard({ name, totals, friend, note, state }: CardProps) {
 }
 
 /** The per-person breakdown for a bill. Used for the live bill and, read-only, for past meals. */
-export function SplitBody({ state }: { state: AppState }) {
+export function SplitBody({ state, onFix }: { state: AppState; onFix?: () => void }) {
   const copy = useCopy();
   const { bill } = state;
 
   if (!bill.items.length) {
-    return <div className="empty">Nothing to split yet. Start on the Receipt tab.</div>;
+    return <div className="empty">Nothing to split yet. Start on the Receipt step.</div>;
   }
 
   const {
@@ -131,9 +131,20 @@ export function SplitBody({ state }: { state: AppState }) {
     <div>
       {notice && <div className="banner warn">{notice}</div>}
       {unassigned && (
-        <div className="banner warn">
-          {unassigned.count} item{unassigned.count > 1 ? 's' : ''} ({fmt(unassigned.totalC)} with
-          tax/tip) still unassigned.
+        <div className="banner warn" role="alert">
+          <span>
+            <b>
+              {unassigned.count} item{unassigned.count > 1 ? 's' : ''} ({fmt(unassigned.totalC)}{' '}
+              with tax/tip) still unassigned.
+            </b>{' '}
+            Nobody is being asked to pay for {unassigned.count > 1 ? 'them' : 'it'}, so the shares
+            below add up to less than the bill.
+          </span>
+          {onFix && (
+            <button type="button" className="small" onClick={onFix}>
+              Assign {unassigned.count > 1 ? 'them' : 'it'}
+            </button>
+          )}
         </div>
       )}
       <div className="btns" style={{ marginTop: 4 }}>
@@ -174,25 +185,6 @@ export function SplitBody({ state }: { state: AppState }) {
   );
 }
 
-export function SplitView() {
-  const state = useAppState();
-  const dispatch = useDispatch();
-  const toast = useToast();
-  return (
-    <>
-      <SplitBody state={state} />
-      {state.bill.items.length > 0 && (
-        <button
-          type="button"
-          className="ghost savebtn"
-          onClick={() => {
-            dispatch({ type: 'finishBill', now: Date.now() });
-            toast('Saved to history');
-          }}
-        >
-          Save to history
-        </button>
-      )}
-    </>
-  );
+export function SplitView({ onFix }: { onFix: () => void }) {
+  return <SplitBody state={useAppState()} onFix={onFix} />;
 }

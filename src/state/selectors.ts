@@ -10,7 +10,7 @@ import {
   type SplitResult,
   UNASSIGNED,
 } from '../core/split';
-import { type AppState, type Bill, type Friend, ME, type Meal } from './types';
+import { type AppState, type Bill, type EditableField, type Friend, ME, type Meal } from './types';
 
 export interface Party {
   id: string;
@@ -164,3 +164,17 @@ export const mealState = (s: AppState, m: Meal): AppState => ({
   people: m.people,
   bill: m.bill,
 });
+
+const FIELD_NAMES: Record<EditableField, string> = {
+  taxC: 'tax',
+  feesC: 'fees',
+  discountC: 'discount',
+  tip: 'tip',
+};
+
+/** "tax", "tax and tip", "tax, tip and fees": for messages about amounts you edited. */
+export function describeFields(fields: readonly EditableField[]): string {
+  const names = fields.map((f) => FIELD_NAMES[f]);
+  if (names.length < 2) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}

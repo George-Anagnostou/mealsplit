@@ -155,6 +155,21 @@ describe('v2 data', () => {
     expect(dup.history.map((m) => m.savedAt)).toEqual([2]);
   });
 
+  test('edited amounts are kept when valid, and missing or junk becomes none', () => {
+    const edited = (v: unknown) => normalizeState({ bill: { edited: v } }, mkCtx()).bill.edited;
+    expect(edited(['tip', 'taxC'])).toEqual(['taxC', 'tip']);
+    expect(edited(['tip', 'bogus', 7, 'tip'])).toEqual(['tip']);
+    expect(edited('taxC')).toEqual([]);
+    expect(edited(undefined)).toEqual([]);
+    // Saved before this field existed: still loads, with nothing edited.
+    expect(ok(v2Full).state.bill.edited).toEqual([]);
+  });
+
+  test('the undo stack is never loaded', () => {
+    const s = normalizeState({ undo: [{ items: [] }], bill: {} }, mkCtx());
+    expect(s.undo).toEqual([]);
+  });
+
   test('an unknown tab falls back to receipt', () => {
     expect(normalizeState({ tab: 'nope' }, mkCtx()).tab).toBe('receipt');
     expect(normalizeState({ tab: 'history' }, mkCtx()).tab).toBe('history');

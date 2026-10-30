@@ -23,6 +23,13 @@ export interface Me {
   contact: string;
 }
 
+/**
+ * The amounts a receipt parse can fill in. Once you change one by hand it is remembered here, so
+ * parsing again keeps your number. `tip` covers the tip mode, percent and dollar amount together.
+ */
+export type EditableField = 'taxC' | 'feesC' | 'discountC' | 'tip';
+export const EDITABLE_FIELDS: readonly EditableField[] = ['taxC', 'feesC', 'discountC', 'tip'];
+
 export interface Bill {
   /** Stable id: saving the same bill to history twice updates one entry. */
   id: string;
@@ -42,6 +49,8 @@ export interface Bill {
   here: string[];
   /** Total printed on the receipt, if the parser found one. */
   parsedTotalC: number | null;
+  /** Amounts you typed yourself. A re-parse leaves these alone. */
+  edited: EditableField[];
 }
 
 /** A finished (or abandoned) bill kept in history, with the friends who were at it. */
@@ -65,4 +74,9 @@ export interface AppState {
   history: Meal[];
   /** The tab you were on, so the app reopens where you left it. */
   tab: Tab;
+  /**
+   * Earlier versions of the bill for Undo, newest first. Lives only in memory: never saved,
+   * exported or restored.
+   */
+  undo: Bill[];
 }
