@@ -168,6 +168,7 @@ label.btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
 /* Assign */
 .banner { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-3); border-radius: var(--radius); margin: var(--sp-3) 0; font-size: var(--fs-sm); background: var(--accent-soft); color: var(--accent-text); }
 .banner > span { flex: 1 1 200px; }
+.banner .btns { margin-top: 0; flex: 0 0 auto; }
 .banner.warn { background: var(--warn-bg); color: var(--warn); }
 .banner.warn button { background: var(--card); color: var(--text); border-color: var(--warn); }
 .toolbar { display: flex; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-3); }

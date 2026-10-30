@@ -33,6 +33,9 @@ const V1 = {
 /** Put raw text into localStorage as an earlier visit would have, then reload so the app reads it. */
 async function seed(page: Page, entries: Record<string, string>) {
   await page.goto('/');
+  // The app saves its starting state right after it first renders. Let that happen before
+  // seeding, or it can land afterwards and overwrite the seed (a rare flake).
+  await page.waitForFunction(() => localStorage.getItem('mealsplit') !== null);
   await page.evaluate((e) => {
     localStorage.clear();
     for (const [k, v] of Object.entries(e)) localStorage.setItem(k, v);

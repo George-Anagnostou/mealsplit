@@ -2,7 +2,7 @@
 
 A short manual pass for the things automated tests can't prove: they need a real iPhone, Safari, and the Venmo and Messages apps. Run it before relying on a new build, and after any change to links, the service worker, or the manifest.
 
-**You need:** an iPhone with Venmo installed and signed in, an HTTPS URL for the build, and a friend (or a second contact of your own) to test with. Service workers and Add to Home Screen only work over HTTPS, so a plain `http://` address on your Wi‑Fi won't do. Don't tap **Send** on anything unless you mean it. Every check below stops at a pre-filled screen.
+**You need:** an iPhone with Venmo installed and signed in, an HTTPS URL for the build (no hosting yet: [`TRY_ON_IPHONE.md`](TRY_ON_IPHONE.md) shows how to serve one from your Mac with mkcert), and a friend (or a second contact of your own) to test with. Service workers and Add to Home Screen only work over HTTPS, so a plain `http://` address on your Wi‑Fi won't do. Don't tap **Send** on anything unless you mean it. Every check below stops at a pre-filled screen.
 
 **Setup:** open the app in Safari, tap **Example** on the Receipt tab, add a friend on the People tab with a real Venmo username and phone number, assign a few items on the Assign tab, and open the Split tab.
 
@@ -42,12 +42,14 @@ Tap **Copy · Zelle**.
 - [ ] Paste into Notes or Messages: it reads "Hey <name>, your share of <note> is $X.XX. Zelle it to <your contact>." (or the generic line if no contact is saved).
 - [ ] **Copy message** and **Copy summary for the group** paste correctly too, and the summary shows a discount as "discount -$X.XX".
 
-## 6. Offline after a second visit
-- [ ] Open the app on Wi‑Fi, fully close it, and open it again (the second visit).
-- [ ] Turn on Airplane Mode.
-- [ ] Close the app completely and relaunch it from the Home Screen: it loads, and your bill is still there.
-- [ ] You can still edit items and use the Split tab offline. (Scanning a photo needs the OCR files cached first, so expect that to need a connection the first time.)
+## 6. Offline, install and updates
+- [ ] Open the app in Safari on Wi‑Fi, wait a few seconds, then turn on Airplane Mode and reload the tab: it loads. (One visit is enough; no second visit needed.)
+- [ ] Add to Home Screen, then close the app completely and relaunch it from the Home Screen in Airplane Mode: it loads, and your bill is still there.
+- [ ] You can still edit items and use the Split tab offline.
 - [ ] Turn Airplane Mode off and the app keeps working.
+- [ ] The Home Screen icon fills its rounded square with no white edge, and the logo is not clipped.
+- [ ] Launched from the Home Screen there is no Safari bar. In Dark mode the status bar at the top is dark with light text, and in Light mode it is light with dark text. Nothing is hidden under it. The launch screen is plain (there are no splash images by design): note if the flash of colour bothers you.
+- [ ] Update: with the app open from the Home Screen, rebuild and restart the preview on the Mac, then leave the app and come back. After a moment a bar says "Update available. Your bill is saved." with **Reload** and **Later**. **Later** hides it. **Reload** restarts the app once, with your bill still in place.
 
 ## 7. Dark mode
 - [ ] Settings → Display & Brightness → Dark: the app switches to its dark theme with no white flashes, and text is readable everywhere (Receipt, People, Assign, Split).
@@ -85,7 +87,7 @@ Tap **Copy · Zelle**.
 - [ ] A receipt photo taken in portrait, and one taken in landscape, both read upright (the items appear in order).
 - [ ] The items fill in, the toast says how many were found, and the status line reminds you to check digits and totals.
 - [ ] Tap **Cancel** halfway: it says "Scan cancelled", the text box is untouched, and you can scan again.
-- [ ] Turn on Airplane Mode and scan after you have scanned once while online: note whether it works (the files are cached the first time they load). Scanning for the first time while offline should fail with a clear message, and pasting text still works.
+- [ ] Scan once while online, then turn on Airplane Mode and scan again: it works (the OCR files are cached the first time a scan loads them). Scanning for the very first time while offline should fail with a clear message, and pasting text still works.
 - [ ] Time a scan on your phone, from picking the photo to "Done": ______ seconds (first scan) and ______ seconds (second scan).
 
 ---

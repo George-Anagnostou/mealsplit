@@ -36,7 +36,7 @@ Goal: an app George uses for real meals, which is fast, reliable, and pleasant.
    - Friends list, George's own payment details, and recent meals (last 20) kept in localStorage, with export/import as JSON and a "clear all data" button.
 6. Quality bar
    - Unit tests for all core logic, a Playwright smoke test of the full flow at a mobile viewport, and checks for accessibility basics (labels, contrast, tap targets).
-   - Offline-capable PWA, installable on iOS, light and dark mode.
+   - Offline-capable PWA (precached shell, update prompt, OCR cached on first use), installable on iOS, light and dark mode.
 7. Optional: model fallback (behind a flag, off by default)
    - A tiny serverless function holds the API key, gated by a passcode or Cloudflare Access, with rate limits.
    - It's a cheap vision model (e.g. Gemini Flash or GPT-4o-mini) that returns the same JSON shape as the rules parser.
