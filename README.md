@@ -24,20 +24,22 @@ Vite + React + TypeScript (strict). Needs Node 20 or newer.
 ```sh
 npm ci            # install the exact locked versions
 npm run dev       # dev server at http://localhost:5173
-npm run check     # typecheck + lint (Biome) + unit tests (Vitest); run before pushing
+npm run check     # typecheck + lint (Biome) + unit tests with a coverage floor (Vitest); run before pushing
 npm run build     # production build into dist/ (any static host works)
 npm run preview   # serve dist/ locally, including the service worker
 ```
 
 On iPhone: open the served page, then Share → Add to Home Screen. The service worker only registers in production builds (`build` + `preview`), so dev reloads are never cached.
 
-Other scripts: `npm run test:e2e` (see below), `npm test`, `npm run test:watch`, `npm run typecheck`, `npm run lint`, `npm run format` (Biome auto-fix).
+Other scripts: `npm run test:e2e` (see below), `npm test`, `npm run test:coverage`, `npm run test:watch`, `npm run typecheck`, `npm run lint`, `npm run format` (Biome auto-fix).
 
 CI (`.github/workflows/ci.yml`) runs typecheck, lint, unit tests, a build and the e2e smoke test on every pull request (and on pushes to `main`). It has read-only permissions, no secrets, and never deploys.
 
 ## Test
 
-Vitest covers the pure core: the split math (proportional tax/tip, shared items, penny reconciliation, edge cases), the receipt parser on four realistic sample receipts (`src/core/__fixtures__/receipts/`), the link/message builders, and money formatting. Tests sit next to the code as `*.test.ts`.
+Vitest covers the pure core: the split math (proportional tax/tip, shared items, penny reconciliation, edge cases), the receipt parser on seven sample receipts (`src/core/__fixtures__/receipts/`, including an `edge-cases.txt` of known probes), the link/message builders, and money formatting. Tests sit next to the code as `*.test.ts`. `npm run test:coverage` enforces thresholds on `src/core` (see `vite.config.ts`).
+
+The parser gives every item a `confidence` (0 to 1) and typed `reasons`. Items below `LOW_CONFIDENCE` get a subtle highlight in the item list until you edit them. The rules for what counts as a fee, a discount, or an item are documented at the top of `src/core/parser.ts`.
 
 ### End-to-end smoke test
 

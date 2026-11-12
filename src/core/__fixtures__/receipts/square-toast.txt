@@ -1,0 +1,22 @@
+THE CORNER TAP
+418 Valencia St, San Francisco CA
+Check #1042   Table 12   Guests: 4
+Server: Dana        10/30/2026 8:15 PM
+
+2  Margherita Pizza             28.00
+1  Caesar Salad                  9.50
+   Add Chicken                   4.00
+3  Draft IPA                    21.00
+1  7 Up                          2.50
+1  12 oz Ribeye                 38.00
+   Happy Hour Discount          -4.00
+
+Subtotal                       103.00
+Sales Tax 8.625%                 8.54
+Service Charge (18%)            17.82
+Total                          125.36
+
+Card: VISA ****4821
+Auth: 204815
+Tip: ______________
+Thank you for dining with us!

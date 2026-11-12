@@ -1,0 +1,22 @@
+Probe Cafe
+Leading numbers
+7 Up 2.50
+12 oz Ribeye 38.00
+2 Tacos 8.00
+2x Tacos 8.00
+Tacos 2 @ 4.00 8.00
+Item names that contain fee or discount words
+Delivery Pizza 18.00
+Bag of Chips 3.00
+Gift Card Salad 11.00
+Member Special Burger 14.00
+Credit Brulee 7.00
+Subtotal 117.50
+Real fee and discount lines
+Delivery Fee 2.99
+Bag fee 0.10
+Service fee 1.50
+Member discount -2.00
+Promo -5.00
+Credit -3.00
+Total 112.09
