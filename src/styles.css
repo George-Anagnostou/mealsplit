@@ -135,3 +135,17 @@ button[disabled] { opacity: .5; }
 
 /* assign rows are buttons now: reset the generic button look */
 .arow { width: 100%; text-align: left; justify-content: flex-start; font: inherit; color: var(--text); }
+
+/* notices, history, data */
+.notice { display: flex; align-items: center; justify-content: space-between; gap: 10px; max-width: 612px; margin: 6px auto; }
+.notice span { flex: 1; }
+.savebtn { width: 100%; margin-top: 10px; }
+.history { list-style: none; margin: 0; padding: 0; }
+.history li + li { border-top: 1px solid var(--line); }
+.meal { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; font: inherit; color: var(--text); background: transparent; border: 0; border-radius: 0; padding: 10px 2px; }
+.meal .mt { display: flex; flex-direction: column; min-width: 0; }
+.meal .mt small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meal .mp { font-weight: 700; font-variant-numeric: tabular-nums; }
+.mealtitle { margin: 12px 0 2px; font-size: 18px; }
+button.danger { color: var(--bad); }
+button.linklike { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; display: inline; }

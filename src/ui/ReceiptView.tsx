@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react';
 import { dollars, fmt, toCents } from '../core/money';
 import { isLowConfidence, parseReceipt } from '../core/parser';
-import { clampDiscount, discountNotice } from '../core/split';
 import { scanReceipt } from '../ocr/ocr';
 import { uid } from '../state/ids';
-import { grandTotalOf, subtotalOf, tipOf } from '../state/selectors';
+import { billTotals } from '../state/selectors';
 import { useAppState, useDispatch } from '../state/store';
 import type { Bill } from '../state/types';
 import { DecimalInput } from './DecimalInput';
@@ -28,17 +27,12 @@ const moneyParse = (t: string) => Math.max(0, toCents(t));
 const moneyFormat = (c: number) => (c ? dollars(c) : '');
 
 function Totals({ bill }: { bill: Bill }) {
-  const sub = subtotalOf(bill);
-  const tip = tipOf(bill);
-  const total = grandTotalOf(bill);
-  const diff = bill.parsedTotalC == null ? 0 : total - bill.parsedTotalC;
-  const discount = clampDiscount(bill.discountC, sub);
-  const notice = discountNotice(bill.discountC, sub);
+  const t = billTotals(bill);
   return (
     <div className="totals">
       <div>
         <span>Items subtotal</span>
-        <span>{fmt(sub)}</span>
+        <span>{fmt(t.subtotalC)}</span>
       </div>
       <div>
         <span>Tax</span>
@@ -46,7 +40,7 @@ function Totals({ bill }: { bill: Bill }) {
       </div>
       <div>
         <span>Tip{bill.tipMode === 'pct' ? ` (${bill.tipPct || 0}%)` : ''}</span>
-        <span>{fmt(tip)}</span>
+        <span>{fmt(t.tipC)}</span>
       </div>
       <div>
         <span>Fees</span>
@@ -55,16 +49,17 @@ function Totals({ bill }: { bill: Bill }) {
       {bill.discountC ? (
         <div>
           <span>Discount</span>
-          <span>-{fmt(discount)}</span>
+          <span>-{fmt(t.discountC)}</span>
         </div>
       ) : null}
-      {notice && <div className="bad warn-note">{notice}</div>}
+      {t.discountNotice && <div className="bad warn-note">{t.discountNotice}</div>}
       <div className="grand">
         <span>Total</span>
-        <span>{fmt(total)}</span>
+        <span>{fmt(t.totalC)}</span>
       </div>
       {bill.parsedTotalC != null &&
-        (diff === 0 ? (
+        t.receiptDiffC != null &&
+        (t.receiptDiffC === 0 ? (
           <div className="ok">
             <span>Receipt total</span>
             <span>{fmt(bill.parsedTotalC)} ✓</span>
@@ -72,7 +67,7 @@ function Totals({ bill }: { bill: Bill }) {
         ) : (
           <div className="bad">
             <span>Receipt says {fmt(bill.parsedTotalC)}</span>
-            <span>off by {fmt(diff)}</span>
+            <span>off by {fmt(t.receiptDiffC)}</span>
           </div>
         ))}
     </div>

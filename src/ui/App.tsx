@@ -1,22 +1,28 @@
 import { useEffect, useState } from 'react';
+import { freshStamp } from '../state/ids';
 import { useAppState, useDispatch } from '../state/store';
 import type { Tab } from '../state/types';
 import { AssignView } from './AssignView';
+import { HistoryView } from './HistoryView';
+import { Notices } from './Notices';
 import { PeopleView } from './PeopleView';
 import { ReceiptView } from './ReceiptView';
 import { SplitView } from './SplitView';
+import { useToast } from './Toast';
 
 const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'receipt', icon: '🧾', label: 'Receipt' },
   { id: 'people', icon: '👥', label: 'People' },
   { id: 'assign', icon: '👆', label: 'Assign' },
   { id: 'split', icon: '💸', label: 'Split' },
+  { id: 'history', icon: '🕘', label: 'History' },
 ];
 
 export function App() {
-  const { bill } = useAppState();
+  const { bill, tab } = useAppState();
   const dispatch = useDispatch();
-  const [tab, setTab] = useState<Tab>('receipt');
+  const toast = useToast();
+  const setTab = (t: Tab) => dispatch({ type: 'setTab', tab: t });
   const [sel, setSel] = useState<string | null>(null);
   // Bumped on "New bill" so the Receipt view drops its transient notices.
   const [epoch, setEpoch] = useState(0);
@@ -27,11 +33,12 @@ export function App() {
   }, [tab]);
 
   const newBill = () => {
-    if (bill.items.length && !confirm('Start a new bill? Your friends list is kept.')) return;
-    dispatch({ type: 'newBill' });
+    // Nothing is lost: the bill goes to History, and the same friends stay ticked.
+    dispatch({ type: 'newBill', stamp: freshStamp() });
     setSel(null);
     setEpoch((n) => n + 1);
     setTab('receipt');
+    if (bill.items.length) toast('Saved to history. New bill started');
   };
 
   return (
@@ -44,6 +51,8 @@ export function App() {
           New bill
         </button>
       </header>
+
+      <Notices />
 
       <main id="main">
         <section className="tab" hidden={tab !== 'receipt'}>
@@ -62,6 +71,11 @@ export function App() {
         {tab === 'split' && (
           <section className="tab">
             <SplitView />
+          </section>
+        )}
+        {tab === 'history' && (
+          <section className="tab">
+            <HistoryView />
           </section>
         )}
       </main>

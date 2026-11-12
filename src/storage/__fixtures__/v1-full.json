@@ -1,0 +1,26 @@
+{
+  "me": { "name": "George", "venmo": "george-a", "contact": "555-010-0100" },
+  "people": [
+    { "id": "sam1", "name": "Sam", "venmo": "sam-w", "contact": "(555) 123-4567" },
+    { "id": "alex2", "name": "Alex", "venmo": "", "contact": "alex@example.com" }
+  ],
+  "bill": {
+    "title": "Burritos",
+    "date": "2026-10-12",
+    "raw": "Burrito Bowl 11.95",
+    "items": [
+      { "id": "i1", "name": "Burrito Bowl", "cents": 1195, "who": ["sam1"] },
+      { "id": "i2", "name": "Chips & Guac", "cents": 890, "who": ["sam1", "alex2", "me"] },
+      { "id": "i3", "name": "Soda", "cents": 299, "who": [] }
+    ],
+    "taxC": 362,
+    "feesC": 639,
+    "discountC": 500,
+    "tipMode": "amt",
+    "tipPct": 18,
+    "tipAmtC": 500,
+    "feesEven": true,
+    "here": ["sam1", "alex2"],
+    "parsedTotalC": 4980
+  }
+}

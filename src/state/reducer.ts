@@ -1,7 +1,9 @@
 import type { ParsedReceipt } from '../core/parser';
 import type { TipMode } from '../core/split';
-import { newBill } from './storage';
-import type { AppState, Friend } from './types';
+import { newBill } from './defaults';
+import { saveCurrent } from './history';
+import type { Stamp } from './ids';
+import type { AppState, Friend, Tab } from './types';
 
 export type Action =
   | { type: 'meta'; field: 'title' | 'date' | 'raw'; value: string }
@@ -14,7 +16,17 @@ export type Action =
   | { type: 'tipPct'; pct: number }
   | { type: 'tipAmt'; cents: number }
   | { type: 'feesEven'; value: boolean }
-  | { type: 'newBill' }
+  | { type: 'setTab'; tab: Tab }
+  /** Save this bill to history, keeping it open. */
+  | { type: 'finishBill'; now: number }
+  /** Save this bill to history, then start a fresh one with the same friends ticked. */
+  | { type: 'newBill'; stamp: Stamp }
+  /** Copy a past meal into a new bill (the current bill is saved to history first). */
+  | { type: 'duplicateMeal'; billId: string; stamp: Stamp }
+  /** Replace everything with imported data. The tab you are on is kept. */
+  | { type: 'importState'; state: AppState }
+  /** Clear all data: back to a fresh app. */
+  | { type: 'resetAll'; state: AppState }
   | { type: 'setMe'; field: 'name' | 'venmo' | 'contact'; value: string }
   | { type: 'addFriend'; friend: Friend }
   | { type: 'editFriend'; id: string; field: 'name' | 'venmo' | 'contact'; value: string }
@@ -61,8 +73,37 @@ export function reducer(s: AppState, a: Action): AppState {
       return withBill({ tipAmtC: Math.max(0, a.cents) });
     case 'feesEven':
       return withBill({ feesEven: a.value });
+    case 'setTab':
+      return { ...s, tab: a.tab };
+    case 'finishBill':
+      return { ...s, history: saveCurrent(s, a.now) };
     case 'newBill':
-      return { ...s, bill: newBill() };
+      return {
+        ...s,
+        history: saveCurrent(s, a.stamp.now),
+        // The same crowd usually eats together: keep who was ticked (friends still on the list).
+        bill: newBill(
+          a.stamp,
+          b.here.filter((id) => s.people.some((p) => p.id === id)),
+        ),
+      };
+    case 'duplicateMeal': {
+      const meal = s.history.find((m) => m.bill.id === a.billId);
+      if (!meal) return s;
+      // Bring back friends deleted since, so nobody's items point at a missing person.
+      const missing = meal.people.filter((p) => !s.people.some((q) => q.id === p.id));
+      return {
+        ...s,
+        history: saveCurrent(s, a.stamp.now),
+        people: [...s.people, ...missing],
+        bill: { ...meal.bill, id: a.stamp.id, date: a.stamp.today },
+        tab: 'receipt',
+      };
+    }
+    case 'importState':
+      return { ...a.state, tab: s.tab };
+    case 'resetAll':
+      return a.state;
     case 'setMe':
       return { ...s, me: { ...s.me, [a.field]: a.value } };
     case 'addFriend':

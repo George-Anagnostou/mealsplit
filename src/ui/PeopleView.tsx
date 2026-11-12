@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { cleanVenmo } from '../core/links';
 import { uid } from '../state/ids';
+import { friendFromInput } from '../state/selectors';
 import { useAppState, useDispatch } from '../state/store';
 import type { Friend } from '../state/types';
 import { Avatar } from './Avatar';
@@ -112,7 +113,10 @@ export function PeopleView() {
       </div>
       <div className="card">
         <h2>Friends</h2>
-        <p className="hint">Saved on this device. Tick who’s at this meal.</p>
+        <p className="hint">
+          Saved on this device. Tick who’s at this meal. A new bill starts with the same people
+          ticked, so you only change what’s different.
+        </p>
         <div>
           {people.length ? (
             people.map((p) => <FriendRow key={p.id} friend={p} here={bill.here.includes(p.id)} />)
@@ -125,12 +129,9 @@ export function PeopleView() {
           autoComplete="off"
           onSubmit={(e) => {
             e.preventDefault();
-            const n = name.trim();
-            if (!n) return;
-            dispatch({
-              type: 'addFriend',
-              friend: { id: uid(), name: n, venmo: cleanVenmo(venmo), contact: contact.trim() },
-            });
+            const friend = friendFromInput(uid(), { name, venmo, contact });
+            if (!friend) return;
+            dispatch({ type: 'addFriend', friend });
             setName('');
             setVenmo('');
             setContact('');
