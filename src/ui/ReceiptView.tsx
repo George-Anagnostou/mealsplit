@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { dollars, fmt, toCents } from '../core/money';
 import { isLowConfidence, parseReceipt } from '../core/parser';
+import { clampDiscount, discountNotice } from '../core/split';
 import { scanReceipt } from '../ocr/ocr';
 import { uid } from '../state/ids';
 import { grandTotalOf, subtotalOf, tipOf } from '../state/selectors';
@@ -31,6 +32,8 @@ function Totals({ bill }: { bill: Bill }) {
   const tip = tipOf(bill);
   const total = grandTotalOf(bill);
   const diff = bill.parsedTotalC == null ? 0 : total - bill.parsedTotalC;
+  const discount = clampDiscount(bill.discountC, sub);
+  const notice = discountNotice(bill.discountC, sub);
   return (
     <div className="totals">
       <div>
@@ -52,9 +55,10 @@ function Totals({ bill }: { bill: Bill }) {
       {bill.discountC ? (
         <div>
           <span>Discount</span>
-          <span>-{fmt(bill.discountC)}</span>
+          <span>-{fmt(discount)}</span>
         </div>
       ) : null}
+      {notice && <div className="bad warn-note">{notice}</div>}
       <div className="grand">
         <span>Total</span>
         <span>{fmt(total)}</span>

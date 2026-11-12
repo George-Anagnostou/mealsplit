@@ -1,5 +1,13 @@
-import { expect, test } from 'vitest';
-import { allocate, computeSplit, computeTip, UNASSIGNED } from './split';
+import { describe, expect, test } from 'vitest';
+import {
+  allocate,
+  clampDiscount,
+  computeSplit,
+  computeTip,
+  discountNotice,
+  reconcile,
+  UNASSIGNED,
+} from './split';
 
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
 
@@ -160,4 +168,109 @@ test('tip: percent of subtotal vs flat', () => {
   expect(computeTip(3333, 'pct', 18, 0)).toBe(600); // 599.94 -> 600
   expect(computeTip(5000, 'amt', 20, 750)).toBe(750);
   expect(computeTip(5000, 'pct', '', 0)).toBe(0);
+});
+
+describe('discount clamping', () => {
+  const items = [
+    { cents: 1000, who: ['a'] },
+    { cents: 500, who: ['b'] },
+  ];
+
+  test('clampDiscount', () => {
+    expect(clampDiscount(500, 1500)).toBe(500);
+    expect(clampDiscount(1500, 1500)).toBe(1500);
+    expect(clampDiscount(9999, 1500)).toBe(1500);
+    expect(clampDiscount(-300, 1500)).toBe(300); // sign is ignored
+    expect(clampDiscount(500, 0)).toBe(0);
+    expect(clampDiscount(500, -100)).toBe(0);
+    expect(clampDiscount(Number.NaN, 1500)).toBe(0);
+    expect(clampDiscount(0, 1500)).toBe(0);
+  });
+
+  test('a normal discount is applied in full and nothing is flagged', () => {
+    const r = computeSplit(items, { taxC: 100, discountC: 300 });
+    expect(r.discountAppliedC).toBe(300);
+    expect(r.discountClamped).toBe(false);
+    expect(r.totalC).toBe(1500 + 100 - 300);
+    expect(r.expectedTotalC).toBe(r.totalC);
+    expect(discountNotice(300, 1500)).toBeNull();
+  });
+
+  test('a discount equal to the subtotal brings items to zero, not below', () => {
+    const r = computeSplit(items, { discountC: 1500 });
+    expect(r.discountClamped).toBe(false);
+    expect(r.parties.a.totalC).toBe(0);
+    expect(r.parties.b.totalC).toBe(0);
+    expect(r.totalC).toBe(0);
+  });
+
+  test('a discount larger than the subtotal clamps and nobody goes negative', () => {
+    const r = computeSplit(items, { taxC: 120, tipC: 200, feesC: 99, discountC: 5000 });
+    expect(r.discountAppliedC).toBe(1500);
+    expect(r.discountClamped).toBe(true);
+    expect(r.expectedTotalC).toBe(1500 + 120 + 200 + 99 - 1500);
+    expect(r.totalC).toBe(r.expectedTotalC);
+    for (const p of Object.values(r.parties)) {
+      expect(p.totalC).toBeGreaterThanOrEqual(0);
+      expect(p.itemsC + p.discountC).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  test('the clamp holds for shared items and awkward penny splits', () => {
+    const shared = [
+      { cents: 100, who: ['a', 'b', 'c'] },
+      { cents: 1, who: ['a'] },
+    ];
+    for (const d of [0, 1, 50, 101, 102, 10_000]) {
+      const r = computeSplit(shared, { discountC: d, taxC: 7 });
+      expect(r.totalC).toBe(r.expectedTotalC);
+      for (const p of Object.values(r.parties))
+        expect(p.itemsC + p.discountC).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  test('unassigned items are covered by the same cap', () => {
+    const r = computeSplit([{ cents: 400, who: [] }], { discountC: 900 });
+    expect(r.discountAppliedC).toBe(400);
+    expect(r.parties[UNASSIGNED].totalC).toBe(0);
+  });
+
+  test('no items at all: any discount is clamped to zero', () => {
+    const r = computeSplit([], { discountC: 500 });
+    expect(r.discountAppliedC).toBe(0);
+    expect(r.discountClamped).toBe(true);
+    expect(r.expectedTotalC).toBe(0);
+  });
+
+  test('the warning names both amounts; no warning when it fits', () => {
+    expect(discountNotice(2000, 1500)).toBe(
+      'Discount $20.00 is more than the items ($15.00), so only $15.00 is applied.',
+    );
+    expect(discountNotice(1500, 1500)).toBeNull();
+    expect(discountNotice(0, 1500)).toBeNull();
+    expect(discountNotice(100, 0)).toMatch(/only \$0\.00 is applied/);
+  });
+});
+
+describe('reconcile against the receipt total', () => {
+  test('match', () => {
+    expect(reconcile(4980, 4980)).toEqual({ status: 'match', diffC: 0 });
+  });
+  test('mismatch reports computed minus receipt', () => {
+    expect(reconcile(5000, 4980)).toEqual({ status: 'mismatch', diffC: 20 });
+    expect(reconcile(4900, 4980)).toEqual({ status: 'mismatch', diffC: -80 });
+  });
+  test('no usable receipt total means unknown, never a false match', () => {
+    for (const t of [null, undefined, 0, -5, Number.NaN]) {
+      expect(reconcile(4980, t)).toEqual({ status: 'unknown', diffC: 0 });
+    }
+  });
+  test('rounds fractional cents before comparing', () => {
+    expect(reconcile(4980.2, 4979.8)).toEqual({ status: 'match', diffC: 0 });
+  });
+  test('it catches a split that really differs from the receipt', () => {
+    const r = computeSplit([{ cents: 1000, who: ['a'] }], { taxC: 100, tipC: 200 });
+    expect(reconcile(r.totalC, 1300).status).toBe('match');
+    expect(reconcile(r.totalC, 1400).status).toBe('mismatch'); // receipt had a fee we did not capture
+  });
 });

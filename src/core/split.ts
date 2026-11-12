@@ -41,6 +41,25 @@ export function allocate(total: number, weights: number[], tieOffset = 0): numbe
   return base.map((x) => x * sign);
 }
 
+/**
+ * A discount can never take more than the items cost, so totals can't go negative.
+ * Returns the discount to apply, as a positive number of cents.
+ */
+export function clampDiscount(discountC: number, subtotalC: number): number {
+  const d = Math.abs(Math.round(Number(discountC) || 0));
+  return Math.min(d, Math.max(0, Math.round(Number(subtotalC) || 0)));
+}
+
+/** A user-facing warning when the discount had to be capped, otherwise null. */
+export function discountNotice(discountC: number, subtotalC: number): string | null {
+  const d = Math.abs(Math.round(Number(discountC) || 0));
+  const applied = clampDiscount(d, subtotalC);
+  if (d <= applied) return null;
+  return `Discount ${money(d)} is more than the items (${money(applied)}), so only ${money(applied)} is applied.`;
+}
+
+const money = (c: number) => `$${(c / 100).toFixed(2)}`;
+
 export type TipMode = 'pct' | 'amt';
 
 /** Tip in cents from either a flat amount or a % of the item subtotal. */
@@ -88,8 +107,14 @@ export interface PartyTotals {
 export interface SplitResult {
   parties: Record<string, PartyTotals>;
   subtotalC: number;
+  /** Sum of every share. Always equals expectedTotalC (the split never loses a cent). */
   totalC: number;
+  /** subtotal + tax + tip + fees - the discount that was actually applied. */
   expectedTotalC: number;
+  /** The discount that was applied, as a positive number (never more than the subtotal). */
+  discountAppliedC: number;
+  /** True when the entered discount was larger than the subtotal and got capped. */
+  discountClamped: boolean;
 }
 
 type SpreadKey = 'taxC' | 'tipC' | 'feesC' | 'discountC';
@@ -164,7 +189,8 @@ export function computeSplit(items: SplitItem[], opts: SplitOptions = {}): Split
   // their own share until they're assigned.
   spread(taxC, 'taxC', false);
   spread(tipC, 'tipC', false);
-  spread(-Math.abs(discountC), 'discountC', false);
+  const discountAppliedC = clampDiscount(discountC, subtotalC);
+  spread(-discountAppliedC, 'discountC', false);
   spread(feesC, 'feesC', !!feesEven);
 
   let totalC = 0;
@@ -176,6 +202,31 @@ export function computeSplit(items: SplitItem[], opts: SplitOptions = {}): Split
     parties,
     subtotalC,
     totalC,
-    expectedTotalC: subtotalC + taxC + tipC + feesC - Math.abs(discountC),
+    expectedTotalC: subtotalC + taxC + tipC + feesC - discountAppliedC,
+    discountAppliedC,
+    discountClamped: Math.abs(Math.round(Number(discountC) || 0)) > discountAppliedC,
   };
+}
+
+export type Reconciliation =
+  | { status: 'match'; diffC: 0 }
+  | { status: 'mismatch'; diffC: number }
+  /** The receipt had no usable total, so there is nothing to compare against. */
+  | { status: 'unknown'; diffC: 0 };
+
+/**
+ * Compare what the split adds up to with the total printed on the receipt.
+ * `diffC` is computed minus receipt (positive: we charge more than the receipt says).
+ * Comparing the split with its own expected total proves nothing, so without a
+ * receipt total the answer is 'unknown'.
+ */
+export function reconcile(
+  computedTotalC: number,
+  receiptTotalC: number | null | undefined,
+): Reconciliation {
+  if (receiptTotalC == null || !Number.isFinite(receiptTotalC) || receiptTotalC <= 0) {
+    return { status: 'unknown', diffC: 0 };
+  }
+  const diffC = Math.round(computedTotalC) - Math.round(receiptTotalC);
+  return diffC === 0 ? { status: 'match', diffC: 0 } : { status: 'mismatch', diffC };
 }

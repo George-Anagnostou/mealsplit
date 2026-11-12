@@ -1,16 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
-
-const cents = (text: string): number => Math.round(Number(text.replace(/[^0-9.-]/g, '')) * 100);
-
-const tab = (page: Page, name: string) =>
-  page.getByRole('navigation').getByRole('button', { name });
-
-/** Tap an item on the Assign tab, then toggle people in the picker. */
-async function assign(page: Page, item: string, people: string[]) {
-  await page.getByRole('button', { name: new RegExp(item) }).click();
-  const picker = page.locator('.picker');
-  for (const p of people) await picker.getByRole('button', { name: p }).click();
-}
+import { expect, test } from '@playwright/test';
+import { assign, cents, tab } from './helpers';
 
 test('receipt → people → assign → split, and state survives a reload', async ({ page }) => {
   await page.goto('/');

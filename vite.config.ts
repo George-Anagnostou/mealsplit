@@ -16,10 +16,12 @@ export default defineConfig({
       // A floor, set just under today's numbers so coverage can only go up.
       thresholds: {
         statements: 95,
-        branches: 85,
+        branches: 90,
         functions: 95,
         lines: 95,
         'src/core/parser.ts': { branches: 90, statements: 95, functions: 95, lines: 95 },
+        'src/core/links.ts': { branches: 90, statements: 95, functions: 95, lines: 95 },
+        'src/core/split.ts': { branches: 90, statements: 95, functions: 95, lines: 95 },
       },
     },
   },
