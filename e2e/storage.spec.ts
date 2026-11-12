@@ -33,6 +33,9 @@ const V1 = {
 /** Put raw text into localStorage as an earlier visit would have, then reload so the app reads it. */
 async function seed(page: Page, entries: Record<string, string>) {
   await page.goto('/');
+  // The app saves its starting state right after it first renders. Let that happen before
+  // seeding, or it can land afterwards and overwrite the seed (a rare flake).
+  await page.waitForFunction(() => localStorage.getItem('mealsplit') !== null);
   await page.evaluate((e) => {
     localStorage.clear();
     for (const [k, v] of Object.entries(e)) localStorage.setItem(k, v);
@@ -213,6 +216,8 @@ test.describe('history', () => {
   });
 
   test('only the last 20 meals are kept', async ({ page }) => {
+    // 22 bills through the real UI: ~20s in WebKit on a busy machine, close to the 30s default.
+    test.slow();
     await page.goto('/');
     for (let n = 1; n <= 22; n++) {
       await parseText(page, `Meal ${n} ${n}.00`);

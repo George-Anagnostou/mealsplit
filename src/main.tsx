@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { registerServiceWorker } from './pwa/register';
 import { StoreProvider } from './state/store';
 import './styles.css';
 import { App } from './ui/App';
@@ -19,6 +20,4 @@ createRoot(root).render(
 );
 
 // Offline app shell (production builds only, so dev reloads aren't cached).
-if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
-}
+if (import.meta.env.PROD) registerServiceWorker(import.meta.env.BASE_URL);

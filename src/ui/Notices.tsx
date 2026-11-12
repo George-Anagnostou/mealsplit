@@ -1,7 +1,9 @@
+import { applyUpdate, dismissUpdate, useUpdateReady } from '../pwa/register';
 import { useStorageStatus } from '../state/store';
 
-/** Small, non-blocking notices about saving and loading. Dismiss any of them. */
+/** Small, non-blocking notices: a new version is ready, or saving/loading went wrong. */
 export function Notices() {
+  const updateReady = useUpdateReady();
   const { loadIssue, saveFailure, dismissLoadIssue, dismissSaveFailure } = useStorageStatus();
 
   const loadText =
@@ -20,6 +22,19 @@ export function Notices() {
 
   return (
     <>
+      {updateReady && (
+        <div className="banner notice" role="status">
+          <span>Update available. Your bill is saved.</span>
+          <div className="btns">
+            <button type="button" className="small" onClick={applyUpdate}>
+              Reload
+            </button>
+            <button type="button" className="ghost small" onClick={dismissUpdate}>
+              Later
+            </button>
+          </div>
+        </div>
+      )}
       {loadText && (
         <div className="banner warn notice" role="status">
           <span>{loadText}</span>

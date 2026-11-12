@@ -31,7 +31,7 @@ npm run build     # production build into dist/ (any static host works)
 npm run preview   # serve dist/ locally, including the service worker
 ```
 
-On iPhone: open the served page, then Share → Add to Home Screen. The service worker only registers in production builds (`build` + `preview`), so dev reloads are never cached.
+On iPhone: open the served page, then Share → Add to Home Screen. The service worker only registers in production builds (`build` + `preview`), so dev reloads are never cached. Service workers need HTTPS (or localhost), so over plain `http://` on your LAN the app works but not offline or installed. [`docs/TRY_ON_IPHONE.md`](docs/TRY_ON_IPHONE.md) has the exact steps to try a build on a phone, including a local HTTPS option with no hosting and no secrets.
 
 Other scripts: `npm run test:e2e` (see below), `npm test`, `npm run test:coverage`, `npm run test:watch`, `npm run typecheck`, `npm run lint`, `npm run format` (Biome auto-fix).
 
@@ -45,7 +45,7 @@ The parser gives every item a `confidence` (0 to 1) and typed `reasons`. Items b
 
 ### End-to-end smoke test
 
-Playwright drives a production build (`vite preview`, port 4173, started automatically) on an iPhone 14 profile in **WebKit**, plus a Pixel 7 profile in Chromium. It walks Example receipt → friends → assign (with a shared item) → Split (shares add up, Venmo link recipient/amount), checks that a reload keeps state, that the manifest loads, and that the service worker registers and the shell loads offline.
+Playwright drives a production build (`vite preview`, port 4173, started automatically) on an iPhone 14 profile in **WebKit**, plus a Pixel 7 profile in Chromium. It walks Example receipt → friends → assign (with a shared item) → Split (shares add up, Venmo link recipient/amount), checks that a reload keeps state, that the manifest is valid and Chromium finds nothing blocking install, that the service worker registers, that the shell loads offline after a single visit, that a scan works offline once the OCR files have been fetched, and the whole update flow.
 
 ```sh
 npx playwright install --with-deps webkit chromium   # once; --with-deps needs sudo on Linux
@@ -94,7 +94,8 @@ All of it lives on your device, in `localStorage`, and only `src/storage/` touch
 
 ```
 index.html                  Vite entry
-public/                     manifest, service worker, home-screen icons (copied as-is)
+public/                     manifest and home-screen icons (copied as-is)
+src/pwa/                    registers the service worker and shows the update prompt; tests for the worker
 src/core/                   pure logic, no DOM or storage; fully unit-tested
   money.ts                  integer-cent helpers
   split.ts                  split math (largest-remainder allocation)
@@ -103,11 +104,19 @@ src/core/                   pure logic, no DOM or storage; fully unit-tested
 src/state/                  app state: types, defaults, pure reducer and selectors, history rules, React context
 src/storage/                the only code that touches localStorage: migrations, export/import, adapter
 src/ocr/                    photo → text (tesseract.js, loaded on demand; plan.ts is the pure, tested part)
-build/                      Vite plugin that copies and verifies the OCR files; the no-CDN scan
+build/                      Vite plugins (copy and verify the OCR files; write sw.js), sw.template.js, the no-CDN scan
 src/ui/                     React components: one view per tab, plus small shared pieces
 src/main.tsx  src/styles.css
 e2e/                        Playwright tests (playwright.config.ts at the root)
 ```
+
+## Offline and install (PWA)
+
+- **Offline after one visit.** The build writes `dist/sw.js` from `build/sw.template.js` with the exact list of hashed files in the build (`build/pwa.ts`, no dependencies). The worker downloads all of them when it installs, so one visit is enough. It never stores an error, a partial or an opaque response, and a failed download fails the install instead of leaving a half shell.
+- **Fast, and kept fresh.** The shell is served from the cache first. The browser checks for a new `sw.js` in the background (and whenever the app comes back to the foreground). The new worker waits: a small "Update available. Your bill is saved." bar offers **Reload** or **Later**. Nothing changes under you mid-bill. Cache names carry the build version, and old caches are deleted when the new worker activates.
+- **Scanning offline.** The OCR files (about 7 MB, one wasm engine per device) are cached the first time a scan loads them, in their own cache that survives app updates. After one scan online, scanning works offline. They are not precached, so people who never scan never download them.
+- **Install details.** The manifest has an `id`, `display: standalone`, separate `any` and `maskable` icons (the maskable one keeps its artwork inside the central 80% circle), an apple-touch-icon, and light and dark `theme-color`. The iOS status bar style is `default` (an opaque bar that iOS themes light or dark, so nothing needs safe-area handling; `black-translucent` would put white text over the light theme). There are no launch ("splash") images: iOS shows a plain screen while the app starts, and a set per device size is a lot of files for little gain. Both are checked on a real phone in [`docs/IPHONE_CHECKLIST.md`](docs/IPHONE_CHECKLIST.md).
+- **Regenerate the maskable icon:** `python3 build/make-maskable-icon.py` (needs Pillow).
 
 ## Limits
 
@@ -119,7 +128,7 @@ e2e/                        Playwright tests (playwright.config.ts at the root)
 
 Scanning runs [tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 on the device. Nothing is sent anywhere, and nothing is loaded from a CDN.
 
-- **Lazy.** The library, worker, wasm engine and language data load only when you pick a photo. The main bundle only holds a small dynamic import.
+- **Lazy.** The library, worker, wasm engine and language data load only when you pick a photo. The main bundle only holds a small dynamic import. They are cached on first use, so a scan works offline after one online scan (see Offline and install above).
 - **Same origin.** `/ocr/worker.min.js`, `/ocr/core/*.wasm.js` and `/ocr/lang/eng.traineddata.gz`. tesseract.js picks the fastest engine the browser can run (relaxed SIMD, SIMD, then plain wasm) from `/ocr/core/`.
 - **Copied at build time, not committed.** `build/ocrAssets.ts` (a small Vite plugin) copies them out of `node_modules`, so they exist in `dist/` and in the dev server but not in git. Each file is checked against a pinned SHA-256, so a changed dependency fails the build. To upgrade, change the exact versions in `package.json`, build, and update the hashes it reports.
 - **Model.** `tessdata_best` English, integer-quantized (2.9 MB). It is the same model tesseract.js uses by default, and it is a better read of faded thermal paper than the "fast" model for a similar size.

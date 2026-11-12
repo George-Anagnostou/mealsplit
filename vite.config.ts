@@ -1,11 +1,23 @@
+import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 import { ocrAssets } from './build/ocrAssets.ts';
+import { pwa } from './build/pwa.ts';
+
+// Optional, for trying the build on a phone: `PREVIEW_CERT=cert.pem PREVIEW_KEY=key.pem npm run preview -- --host`
+// serves https with a certificate you made yourself (see docs/TRY_ON_IPHONE.md). Paths only: nothing is
+// stored in the repo and no secret is needed. Without both variables, preview is plain http as before.
+const { PREVIEW_CERT, PREVIEW_KEY } = process.env;
+const https =
+  PREVIEW_CERT && PREVIEW_KEY
+    ? { cert: readFileSync(PREVIEW_CERT), key: readFileSync(PREVIEW_KEY) }
+    : undefined;
 
 export default defineConfig({
   // Relative asset paths so the build works from any subdomain or sub-path.
   base: './',
-  plugins: [react(), ocrAssets()],
+  plugins: [react(), ocrAssets(), pwa()],
+  preview: { https },
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
