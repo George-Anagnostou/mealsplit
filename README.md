@@ -5,6 +5,7 @@ A tiny static web app for splitting a food bill with friends and requesting paym
 ![mealsplit on a phone](screenshot.png)
 
 ## What it does
+
 1. **Receipt**: paste receipt text, or scan/upload a photo (OCR runs in the browser via [tesseract.js](https://github.com/naptha/tesseract.js), loaded from a CDN on demand). It parses items, subtotal, tax, tip, fees and discounts. Every item is editable; tip can be `$` or `%` of the subtotal.
 2. **People**: save friends (name, Venmo username, phone/email for Zelle/Apple Cash). You ("me") are never charged.
 3. **Assign**: tap an item, then tap who had it. Shared items split evenly.
@@ -16,32 +17,46 @@ A tiny static web app for splitting a food bill with friends and requesting paym
 
 Tax, tip and discounts are allocated in proportion to each person's item subtotal; fees can instead be split evenly. Cents are allocated with the largest-remainder method, so the shares always add up to exactly the receipt total.
 
-## Run
+## Develop
+
+Vite + React + TypeScript (strict). Needs Node 20 or newer.
+
 ```sh
-python3 -m http.server 8080   # or: npx serve
-# open http://localhost:8080  (on iPhone: Share → Add to Home Screen)
+npm ci            # install the exact locked versions
+npm run dev       # dev server at http://localhost:5173
+npm run check     # typecheck + lint (Biome) + unit tests (Vitest); run before pushing
+npm run build     # production build into dist/ (any static host works)
+npm run preview   # serve dist/ locally, including the service worker
 ```
-It is plain HTML/CSS/ES modules: no build step. Any static host works.
+
+On iPhone: open the served page, then Share → Add to Home Screen. The service worker only registers in production builds (`build` + `preview`), so dev reloads are never cached.
+
+Other scripts: `npm test`, `npm run test:watch`, `npm run typecheck`, `npm run lint`, `npm run format` (Biome auto-fix).
+
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, tests and a build on every pull request. It has read-only permissions, no secrets, and never deploys.
 
 ## Test
-```sh
-npm test    # node's built-in test runner, no dependencies
-```
-Covers the split math (proportional tax/tip, shared items, penny reconciliation, edge cases), the receipt parser on four realistic sample receipts (`test/receipts/`), and the link/message builders.
+
+Vitest covers the pure core: the split math (proportional tax/tip, shared items, penny reconciliation, edge cases), the receipt parser on four realistic sample receipts (`src/core/__fixtures__/receipts/`), the link/message builders, and money formatting. Tests sit next to the code as `*.test.ts`.
 
 ## Layout
+
 ```
-index.html  manifest.webmanifest  sw.js
-css/styles.css
-js/split.js    split math (integer cents)
-js/parser.js   receipt text → items + totals
-js/links.js    Venmo / sms: links and message text
-js/app.js      UI
-icons/         home-screen icons
-test/          node tests + sample receipts
+index.html                  Vite entry
+public/                     manifest, service worker, home-screen icons (copied as-is)
+src/core/                   pure logic, no DOM or storage; fully unit-tested
+  money.ts                  integer-cent helpers
+  split.ts                  split math (largest-remainder allocation)
+  parser.ts                 receipt text → items + totals
+  links.ts                  Venmo / sms: links and message text
+src/state/                  app state: types, reducer, selectors, localStorage, context
+src/ocr/                    photo → text (tesseract.js, loaded on demand)
+src/ui/                     React components: one view per tab, plus small shared pieces
+src/main.tsx  src/styles.css
 ```
 
 ## Limits
+
 - OCR accuracy depends on the photo; always check items and totals (the app shows whether your total matches the receipt's).
 - Apple Cash and Zelle can't be pre-filled as requests. The app gives you ready-to-send text instead.
 - Venmo's link format is unofficial/historical; if it stops prefilling, use the app-link fallback or the copied message.
