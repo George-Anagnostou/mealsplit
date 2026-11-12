@@ -6,7 +6,7 @@ A tiny static web app for splitting a food bill with friends and requesting paym
 
 ## What it does
 
-1. **Receipt**: paste receipt text, or scan/upload a photo (OCR runs in the browser via [tesseract.js](https://github.com/naptha/tesseract.js), loaded from a CDN on demand). It parses items, subtotal, tax, tip, fees and discounts. Every item is editable; tip can be `$` or `%` of the subtotal.
+1. **Receipt**: paste receipt text, or scan/upload a photo (OCR runs on your device via [tesseract.js](https://github.com/naptha/tesseract.js). The photo never leaves the phone, and the engine loads only when you pick a photo). It parses items, subtotal, tax, tip, fees and discounts. Every item is editable; tip can be `$` or `%` of the subtotal.
 2. **People**: save friends (name, Venmo username, phone/email for Zelle/Apple Cash). You ("me") are never charged.
 3. **Assign**: tap an item, then tap who had it. Shared items split evenly.
 4. **Split**: per-person breakdown plus:
@@ -102,7 +102,8 @@ src/core/                   pure logic, no DOM or storage; fully unit-tested
   links.ts                  Venmo / sms: links and message text
 src/state/                  app state: types, defaults, pure reducer and selectors, history rules, React context
 src/storage/                the only code that touches localStorage: migrations, export/import, adapter
-src/ocr/                    photo → text (tesseract.js, loaded on demand)
+src/ocr/                    photo → text (tesseract.js, loaded on demand; plan.ts is the pure, tested part)
+build/                      Vite plugin that copies and verifies the OCR files; the no-CDN scan
 src/ui/                     React components: one view per tab, plus small shared pieces
 src/main.tsx  src/styles.css
 e2e/                        Playwright tests (playwright.config.ts at the root)
@@ -113,3 +114,17 @@ e2e/                        Playwright tests (playwright.config.ts at the root)
 - OCR accuracy depends on the photo; always check items and totals (the app shows whether your total matches the receipt's).
 - Apple Cash and Zelle can't be pre-filled as requests. The app gives you ready-to-send text instead.
 - Venmo's link format is unofficial/historical; if it stops prefilling, use the app-link fallback or the copied message.
+
+## Receipt scanning (OCR)
+
+Scanning runs [tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 on the device. Nothing is sent anywhere, and nothing is loaded from a CDN.
+
+- **Lazy.** The library, worker, wasm engine and language data load only when you pick a photo. The main bundle only holds a small dynamic import.
+- **Same origin.** `/ocr/worker.min.js`, `/ocr/core/*.wasm.js` and `/ocr/lang/eng.traineddata.gz`. tesseract.js picks the fastest engine the browser can run (relaxed SIMD, SIMD, then plain wasm) from `/ocr/core/`.
+- **Copied at build time, not committed.** `build/ocrAssets.ts` (a small Vite plugin) copies them out of `node_modules`, so they exist in `dist/` and in the dev server but not in git. Each file is checked against a pinned SHA-256, so a changed dependency fails the build. To upgrade, change the exact versions in `package.json`, build, and update the hashes it reports.
+- **Model.** `tessdata_best` English, integer-quantized (2.9 MB). It is the same model tesseract.js uses by default, and it is a better read of faded thermal paper than the "fast" model for a similar size.
+- **Photos.** Large photos are shrunk before OCR (long side at most 2200 px), EXIF orientation is applied, and the image is converted to greyscale with the contrast stretched. iOS converts HEIC to JPEG itself when an input says `accept="image/*"`.
+- **Guard.** `src/ocr/offline.test.ts` and `e2e/offline.spec.ts` fail if a CDN URL appears in `src/`, `index.html`, `public/` or the build output. `e2e/ocr.spec.ts` runs real OCR on a synthetic receipt and checks that every request stays on this origin.
+- **Regenerate the test receipt:** `python3 e2e/fixtures/make-receipt.py` (needs Pillow and DejaVu Sans Mono).
+
+Licenses are in [NOTICE.md](NOTICE.md) and are also served at `/ocr/licenses/`.

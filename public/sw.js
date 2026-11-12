@@ -1,4 +1,5 @@
-// Offline app shell. OCR (tesseract.js from CDN) still needs a network connection.
+// Offline app shell. The OCR files (/ocr/, about 7 MB) are not cached on install; like everything else
+// on this origin they are cached the first time a scan fetches them.
 const CACHE = 'mealsplit-v2';
 // Built JS/CSS have hashed names, so they're cached at runtime by the fetch handler below.
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];

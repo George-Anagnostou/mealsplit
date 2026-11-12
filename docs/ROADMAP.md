@@ -20,7 +20,7 @@ Goal: an app George uses for real meals, which is fast, reliable, and pleasant.
 1. Architecture cleanup
    - Split the code into `core/` (split, parser, links; pure), `state/` (one store with explicit actions), `storage/` (a small adapter over localStorage, with versioned schema and migrations), and `ui/` (views per step).
    - Use a typed codebase (TypeScript or JSDoc types checked by `tsc`), with a lint and format setup and a single `npm run check`.
-   - Bundle third-party code (the OCR library) locally or pin it with a fixed version and subresource-integrity hash. No unpinned CDN scripts.
+   - Bundle third-party code (the OCR library) locally or pin it with a fixed version and subresource-integrity hash. No unpinned CDN scripts. (Done: tesseract.js 7.0.0 and its files are served from the app's own origin; a test fails if a CDN URL appears.)
 2. Core flow polish (done: step bar with Back/Next, multi-select, undo, unassigned warnings, edit-tracked amounts, accessibility pass)
    - The steps are receipt, people, assign, split, and request, with a clear progress indicator and back/next.
    - Fast assignment: multi-select, "split among everyone", and undo.
