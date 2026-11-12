@@ -24,6 +24,7 @@ export default defineConfig({
         'src/core/links.ts': { branches: 90, statements: 95, functions: 95, lines: 95 },
         'src/core/split.ts': { branches: 90, statements: 95, functions: 95, lines: 95 },
         'src/state/reducer.ts': { branches: 90, statements: 95, functions: 95, lines: 95 },
+        'src/state/flow.ts': { branches: 90, statements: 95, functions: 95, lines: 95 },
         'src/state/history.ts': { branches: 90, statements: 95, functions: 95, lines: 95 },
         'src/storage/migrate.ts': { branches: 90, statements: 95, functions: 95, lines: 95 },
         'src/storage/storage.ts': { branches: 85, statements: 95, functions: 95, lines: 95 },

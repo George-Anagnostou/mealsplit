@@ -16,6 +16,7 @@ export const newBill = (stamp: Pick<Stamp, 'id' | 'today'>, here: string[] = [])
   feesEven: false,
   here,
   parsedTotalC: null,
+  edited: [],
 });
 
 export const defaultState = (stamp: Pick<Stamp, 'id' | 'today'> = freshStamp()): AppState => ({
@@ -24,4 +25,5 @@ export const defaultState = (stamp: Pick<Stamp, 'id' | 'today'> = freshStamp()):
   bill: newBill(stamp),
   history: [],
   tab: 'receipt',
+  undo: [],
 });

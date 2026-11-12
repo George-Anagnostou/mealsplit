@@ -54,12 +54,14 @@ function FriendRow({ friend, here }: { friend: Friend; here: boolean }) {
     'no payment details';
   return (
     <div className="friend">
-      <input
-        type="checkbox"
-        checked={here}
-        aria-label={`${friend.name} is at this meal`}
-        onChange={() => dispatch({ type: 'toggleHere', id: friend.id })}
-      />
+      <label className="here">
+        <input
+          type="checkbox"
+          checked={here}
+          aria-label={`${friend.name} is at this meal`}
+          onChange={() => dispatch({ type: 'toggleHere', id: friend.id })}
+        />
+      </label>
       <Avatar name={friend.name} />
       <div className="info">
         <div className="nm">{friend.name}</div>

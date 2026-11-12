@@ -65,7 +65,7 @@ export function DataCard() {
           <input
             type="file"
             accept="application/json,.json"
-            hidden
+            className="sr"
             aria-label="Import file"
             onChange={(e) => {
               const f = e.target.files?.[0];

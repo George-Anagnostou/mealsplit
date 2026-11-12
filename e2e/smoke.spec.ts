@@ -40,7 +40,7 @@ test('receipt → people → assign → split, and state survives a reload', asy
     const cards = page.locator('.pcard');
     await expect(cards).toHaveCount(3);
 
-    const totals = await cards.locator('h3 .big').allInnerTexts();
+    const totals = await cards.locator('h2 .big').allInnerTexts();
     expect(totals.map(cents).reduce((a, b) => a + b, 0)).toBe(4980);
     await expect(page.locator('.recon')).toContainText('$49.80 ✓');
 
@@ -53,7 +53,7 @@ test('receipt → people → assign → split, and state survives a reload', asy
     expect(url.origin + url.pathname).toBe('https://venmo.com/');
     expect(url.searchParams.get('recipients')).toBe('sam');
     expect(url.searchParams.get('txn')).toBe('charge');
-    const samTotal = cents((await sam.locator('h3 .big').textContent()) ?? '');
+    const samTotal = cents((await sam.locator('h2 .big').textContent()) ?? '');
     expect(cents(url.searchParams.get('amount') ?? '')).toBe(samTotal);
   });
 

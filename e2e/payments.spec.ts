@@ -15,7 +15,7 @@ test('someone who owes $0 gets an "owes nothing" state instead of payment reques
 
   await tab(page, 'Split').click();
   const sam = page.locator('.pcard', { hasText: 'Sam' });
-  await expect(sam.locator('h3 .big')).toHaveText('$0.00');
+  await expect(sam.locator('h2 .big')).toHaveText('$0.00');
   await expect(sam.locator('.owes0')).toContainText('Owes nothing');
   await expect(sam.getByRole('link')).toHaveCount(0);
   await expect(sam.getByRole('button', { name: /Zelle|message/i })).toHaveCount(0);
@@ -46,7 +46,7 @@ test('a discount bigger than the items is capped and warned about on both tabs',
   await assign(page, 'Fries', ['Sam']);
   await tab(page, 'Split').click();
   await expect(page.locator('.banner.warn')).toContainText(warning);
-  await expect(page.locator('.pcard', { hasText: 'Sam' }).locator('h3 .big')).toHaveText('$0.00');
+  await expect(page.locator('.pcard', { hasText: 'Sam' }).locator('h2 .big')).toHaveText('$0.00');
 });
 
 test('the Split check compares against the receipt total, and flags a difference', async ({

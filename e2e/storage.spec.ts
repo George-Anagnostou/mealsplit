@@ -171,7 +171,7 @@ test.describe('history', () => {
     // Open it: read-only (no editing controls), with the split.
     await row.click();
     await expect(page.getByText('read-only')).toBeVisible();
-    await expect(page.locator('.pcard', { hasText: 'Sam' }).locator('h3 .big')).toHaveText(
+    await expect(page.locator('.pcard', { hasText: 'Sam' }).locator('h2 .big')).toHaveText(
       '$15.00',
     );
     // (The Receipt tab stays mounted but hidden, so look for visible editing controls.)

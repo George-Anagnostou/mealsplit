@@ -41,7 +41,7 @@ function PastMeal({ id, onBack }: { id: string; onBack: () => void }) {
             Duplicate into new bill
           </button>
         </div>
-        <h3 className="mealtitle">{sum.label}</h3>
+        <h2 className="mealtitle">{sum.label}</h2>
         <p className="hint">
           {prettyDate(sum.date)} · {sum.people.join(', ')} · read-only
         </p>
@@ -62,7 +62,7 @@ export function HistoryView() {
       <div className="card">
         <h2>Past meals</h2>
         {state.history.length ? (
-          <ul className="history">
+          <ul className="meals">
             {state.history.map((m) => {
               const s = mealSummary(m, state.me.name);
               return (
@@ -82,7 +82,7 @@ export function HistoryView() {
           </ul>
         ) : (
           <p className="hint">
-            Nothing yet. A bill is saved here when you tap “Save to history” on the Split tab or
+            Nothing yet. A bill is saved here when you tap “Save to history” on the Split step or
             start a new bill. The last 20 are kept.
           </p>
         )}

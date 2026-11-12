@@ -56,20 +56,32 @@ npx playwright show-report                           # after a failure
 
 `e2e/storage.spec.ts` seeds old v1 localStorage and checks it migrates, then covers history (save, re-open read-only, duplicate, the 20 cap), New bill keeping friends ticked, corrupt and future data, a full-storage notice, tab persistence, and export, import and clear all.
 
-`e2e/payments.spec.ts` covers the "owes nothing" state, the discount cap warning, and the Split-tab check against the receipt's own total.
+`e2e/flow.spec.ts` covers the step bar and Back/Next, multi-select and "everyone" assignment, undo, the unassigned warnings, edits surviving a re-parse (and a reload), and a 44px tap-target check. `e2e/a11y.spec.ts` runs `@axe-core/playwright` (pinned) on every step in light and dark.
+
+`e2e/payments.spec.ts` covers the "owes nothing" state, the discount cap warning, and the Split-step check against the receipt's own total.
 
 ### Payments and manual checks
 
 - Nobody who owes $0 or less gets a Venmo, Apple Cash or Zelle request; their card says so instead. Links are built from cleaned input (Venmo username, phone number, note) and always percent-encoded.
 - A discount larger than the item subtotal is capped at the subtotal, with a visible warning. What you typed is kept.
-- The check line on the Split tab compares against the receipt's parsed total; with no parsed total it says so rather than showing a tick.
+- The check line on the Split step compares against the receipt's parsed total; with no parsed total it says so rather than showing a tick.
 - Real-phone checks (Venmo deep links, Messages, Add to Home Screen, offline, dark mode) are in [`docs/IPHONE_CHECKLIST.md`](docs/IPHONE_CHECKLIST.md).
+
+## The flow
+
+One step bar across the top (Receipt → People → Assign → Split) shows where you are and what is done. **Back / Next** sit at the bottom, in thumb reach; History and New bill are in the header, since they are not steps. A bottom tab bar would have repeated the step bar, so there is one control, not two.
+
+- **Assign:** tap an item, then tap who had it. **Select several** lets you tap more items first, so one tap on a person applies to all of them (a person is shown as "mixed" when only some of the items have them). **All** on a row splits that item among everyone; **Split the rest among everyone** and **Everyone shares everything** do it in bulk.
+- **Undo:** every assignment change, and re-parsing over existing items, can be undone (a toast, or **↶ Undo**; the last 30 steps). Editing an item or an amount starts a new undo history, so Undo never surprises you. Undo history is in memory only and is never saved.
+- **Unassigned items** are flagged on Assign (Next becomes **Split anyway**) and on Split (a clear alert that the shares add up to less than the bill, with a button back to Assign). It warns rather than blocks, because leaving something unassigned can be deliberate.
+- **Tax, tip, fees and discount** are plain editable fields. Whatever you type is marked **edited** and is kept if you parse the receipt again (the toast says what was kept). **Let parsing replace it** hands a field back to the parser.
+- **Accessibility:** semantic buttons and labelled inputs, `aria-current="step"` on the step bar, focus moves to the step heading when you change step, visible focus rings, 44px minimum tap targets, AA colour contrast in light and dark, iPhone safe-area insets, and `prefers-reduced-motion`. An axe scan runs on every step in both themes (`e2e/a11y.spec.ts`).
 
 ## Saved data
 
 All of it lives on your device, in `localStorage`, and only `src/storage/` touches it (a unit test enforces that).
 
-- **What is kept:** your payment details, saved friends (with their handles), the current bill, the last 20 meals, and which tab you were on.
+- **What is kept:** your payment details, saved friends (with their handles), the current bill, the last 20 meals, and which step you were on, and which of tax, tip, fees and discount you edited by hand (the undo history is not saved).
 - **New bill** saves the current bill to history (empty bills are skipped) and starts a fresh one **with the same friends ticked**: the same people usually eat together, so you only change what is different. Friends are never removed by a new bill.
 - **History** keeps one entry per bill (saving again updates it), newest first, capped at 20. Each meal remembers the friends who were there, so it still reads correctly if you delete a friend later.
 - **Format:** a versioned envelope `{ "version": 2, "data": { me, people, bill, history, tab } }` under the key `mealsplit`. `src/storage/migrate.ts` has the migrations (v1 to v2 so far) and a deep, safe merge with defaults, so data missing keys never shows "undefined".

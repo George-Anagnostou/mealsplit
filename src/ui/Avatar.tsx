@@ -18,7 +18,7 @@ export function Avatar({ name, small = false }: { name: string; small?: boolean 
   return (
     <span
       className={`av${small ? ' sm' : ''}`}
-      style={{ background: `hsl(${hue(name)} 55% 46%)` }}
+      style={{ background: `hsl(${hue(name)} 55% 34%)` }}
       aria-hidden="true"
     >
       {initials(name)}
