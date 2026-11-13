@@ -4,6 +4,9 @@ dist/
 *.log
 .vercel/
 .env*
+!.env*.example
+# Deploy settings (host, path). See .env.deploy.example.
+.env.deploy
 playwright-report/
 test-results/
 coverage/

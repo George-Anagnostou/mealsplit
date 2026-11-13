@@ -32,6 +32,20 @@ jobs:
       - run: npm run test:coverage
       - run: npm run build
 
+  # The deploy files, checked without deploying: shell lint, the deploy script's local-mode
+  # tests (temp directory, no SSH), and `nginx -t` on the site config.
+  deploy-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck scripts/*.sh
+      - run: sh scripts/deploy_test.sh
+      - name: nginx -t on deploy/nginx/mealsplit.conf
+        run: |
+          command -v nginx >/dev/null || { sudo apt-get update && sudo apt-get install -y nginx; }
+          sudo cp deploy/nginx/mealsplit.conf /etc/nginx/sites-enabled/mealsplit.conf
+          sudo nginx -t
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
