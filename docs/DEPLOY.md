@@ -10,17 +10,19 @@ internet → nginx :443 (mealsplit.georgeanagnostou.com) → /var/www/mealsplit/
 
 | Path on the VPS | Purpose |
 |-----------------|---------|
-| `/etc/nginx/sites-available/mealsplit.georgeanagnostou.com` | nginx site (from `deploy/nginx/mealsplit.conf`; certbot adds TLS to it) |
+| `/etc/nginx/sites-available/mealsplit.georgeanagnostou.com` | nginx site (from `deploy/nginx/mealsplit.conf`, including TLS) |
 | `/var/www/mealsplit/releases/<UTC time>-<commit>/` | One directory per deploy; the last 5 are kept |
 | `/var/www/mealsplit/current` | Symlink to the live release; this is nginx's `root` |
+| `/var/www/mealsplit/acme/` | Webroot for this site's certificate challenges and renewals |
 
 Deploys are manual, from your Mac, like `make update` for bookmarks. Nothing in GitHub deploys,
 and no secrets are stored anywhere.
 
 ## One-time setup
 
-You need: SSH access to the VPS through an `~/.ssh/config` alias (`mysite` below, the same one
-bookmarks uses), sudo on the VPS, and `rsync` on both ends (Debian: `sudo apt-get install rsync`).
+You need: SSH access to the VPS through the `kapnizo` alias in `~/.ssh/config`, sudo on the VPS,
+and `rsync` on both ends (Debian: `sudo apt-get install rsync`). Only MealSplit's site, certificate,
+and `/var/www/mealsplit` directory are added. Existing service configurations stay untouched.
 
 1. **DNS.** At Epik, add an A record: host `mealsplit`, value `45.77.187.37`. A specific record
    wins over the `*` wildcard that points other subdomains at Vercel.
@@ -37,31 +39,49 @@ bookmarks uses), sudo on the VPS, and `rsync` on both ends (Debian: `sudo apt-ge
 3. **Directory for releases**, owned by your SSH user so deploys need no sudo:
 
    ```sh
-   ssh mysite 'sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 0755 /var/www/mealsplit'
+   ssh kapnizo 'sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 0755 /var/www/mealsplit /var/www/mealsplit/acme'
    ```
 
-4. **nginx site.** From the repo on your Mac:
+4. **Bootstrap nginx site.** Only for first setup, before the certificate exists. From your Mac:
 
    ```sh
-   scp deploy/nginx/mealsplit.conf mysite:/tmp/mealsplit.conf
-   ssh mysite 'sudo install -m 0644 /tmp/mealsplit.conf /etc/nginx/sites-available/mealsplit.georgeanagnostou.com &&
-     rm /tmp/mealsplit.conf &&
-     sudo ln -sf /etc/nginx/sites-available/mealsplit.georgeanagnostou.com /etc/nginx/sites-enabled/mealsplit.georgeanagnostou.com &&
+   scp deploy/nginx/mealsplit-http.conf kapnizo:/var/www/mealsplit/bootstrap.conf
+   ssh kapnizo 'test ! -e /etc/nginx/sites-available/mealsplit.georgeanagnostou.com &&
+     sudo install -m 0644 /var/www/mealsplit/bootstrap.conf /etc/nginx/sites-available/mealsplit.georgeanagnostou.com &&
+     rm /var/www/mealsplit/bootstrap.conf &&
+     sudo ln -s /etc/nginx/sites-available/mealsplit.georgeanagnostou.com /etc/nginx/sites-enabled/mealsplit.georgeanagnostou.com &&
      sudo nginx -t &&
-     (sudo systemctl reload nginx || sudo systemctl restart nginx)'
+     sudo systemctl reload nginx'
    ```
 
-5. **TLS.** certbot edits the installed site to add the certificate, HTTPS and the HTTP → HTTPS
-   redirect, and renews it with the existing certbot timer:
+5. **TLS.** Certbot's webroot mode issues a separate certificate without editing any nginx
+   configuration. The existing Certbot timer handles renewals; this certificate's deploy hook
+   validates and gracefully reloads nginx when renewed:
 
    ```sh
-   ssh -t mysite 'sudo certbot --nginx -d mealsplit.georgeanagnostou.com --redirect'
+   ssh kapnizo 'sudo certbot certonly --non-interactive --webroot \
+     --webroot-path /var/www/mealsplit/acme \
+     --cert-name mealsplit.georgeanagnostou.com -d mealsplit.georgeanagnostou.com \
+     --deploy-hook "nginx -t && systemctl reload nginx"'
    ```
 
-6. **First deploy.** On your Mac:
+6. **First deploy and HTTPS site.** Upload the app before enabling the HTTPS site:
 
    ```sh
-   cp .env.deploy.example .env.deploy   # defaults: host mysite, /var/www/mealsplit, the https URL
+   # No .env.deploy yet: omit the live URL until the HTTPS site is installed.
+   MEALSPLIT_DEPLOY_HOST=kapnizo make deploy
+   scp deploy/nginx/mealsplit.conf kapnizo:/var/www/mealsplit/site.conf
+   ssh kapnizo 'sudo cp /etc/nginx/sites-available/mealsplit.georgeanagnostou.com /var/www/mealsplit/site.conf.previous &&
+     sudo install -m 0644 /var/www/mealsplit/site.conf /etc/nginx/sites-available/mealsplit.georgeanagnostou.com &&
+     rm /var/www/mealsplit/site.conf &&
+     sudo nginx -t &&
+     sudo systemctl reload nginx'
+   cp .env.deploy.example .env.deploy   # host kapnizo, /var/www/mealsplit, the https URL
+   ```
+
+   Later deployments use:
+
+   ```sh
    make deploy
    ```
 
@@ -115,7 +135,7 @@ again, deploy.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `MEALSPLIT_DEPLOY_HOST` | (required) | SSH target, e.g. the `mysite` alias |
+| `MEALSPLIT_DEPLOY_HOST` | (required) | SSH target, e.g. the `kapnizo` alias |
 | `MEALSPLIT_DEPLOY_USER` | from SSH config | SSH user, if the alias does not set one |
 | `MEALSPLIT_DEPLOY_PATH` | `/var/www/mealsplit` | Release directory on the server |
 | `MEALSPLIT_URL` | (none: no live check) | Public URL checked after deploy and by `make verify` |
@@ -139,7 +159,13 @@ again, deploy.
   The full e2e suite, OCR scans included, passes in WebKit and Chromium against this config.
 
 If a future change trips the CSP, Safari's Web Inspector console shows "Refused to …"; adjust
-the `Content-Security-Policy` line in `deploy/nginx/mealsplit.conf` and reinstall it (step 4).
+the `Content-Security-Policy` line in `deploy/nginx/mealsplit.conf` and reinstall the HTTPS
+site using the `scp` and `ssh` commands in step 6. The template includes TLS, so HTTPS is
+preserved. Never reinstall the bootstrap site over an existing HTTPS site.
+
+Always run `nginx -t` before a graceful reload. If validation fails, restore MealSplit's
+previous site file from `/var/www/mealsplit/site.conf.previous` and validate again; do not
+restart nginx or alter another service's site.
 
 ## Testing the deploy files
 

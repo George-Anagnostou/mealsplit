@@ -40,9 +40,17 @@ jobs:
       - uses: actions/checkout@v4
       - run: shellcheck scripts/*.sh
       - run: sh scripts/deploy_test.sh
-      - name: nginx -t on deploy/nginx/mealsplit.conf
+      - name: nginx -t on bootstrap and HTTPS sites
         run: |
           command -v nginx >/dev/null || { sudo apt-get update && sudo apt-get install -y nginx; }
+          sudo cp deploy/nginx/mealsplit-http.conf /etc/nginx/sites-enabled/mealsplit.conf
+          sudo nginx -t
+          # Ephemeral test certificate: no production keys or ACME calls in CI.
+          sudo install -d /etc/letsencrypt/live/mealsplit.georgeanagnostou.com
+          sudo openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -subj /CN=mealsplit.georgeanagnostou.com \
+            -keyout /etc/letsencrypt/live/mealsplit.georgeanagnostou.com/privkey.pem \
+            -out /etc/letsencrypt/live/mealsplit.georgeanagnostou.com/fullchain.pem
           sudo cp deploy/nginx/mealsplit.conf /etc/nginx/sites-enabled/mealsplit.conf
           sudo nginx -t
 
