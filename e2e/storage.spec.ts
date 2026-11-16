@@ -69,16 +69,16 @@ test.describe('old data survives', () => {
     await expect(page.getByLabel('Alex is at this meal')).toBeChecked();
 
     await tab(page, 'Receipt').click();
-    await expect(page.getByLabel('Item name')).toHaveCount(3);
+    await expect(page.locator('.itemrow')).toHaveCount(3);
     await expect(page.locator('.totals')).toContainText('$33.85');
 
     await tab(page, 'Split').click();
     await expect(page.locator('.pcard', { hasText: 'Sam' })).toBeVisible();
     await expect(page.locator('.pcard', { hasText: 'Alex' })).toBeVisible();
 
-    // It was rewritten as a v2 envelope, and the old copy is still there to roll back to.
+    // It was rewritten as a v3 envelope, and the old copy is still there to roll back to.
     const env = await stored(page);
-    expect(env.version).toBe(2);
+    expect(env.version).toBe(3);
     expect(env.data.people).toHaveLength(2);
     expect(env.data.bill.id).toBeTruthy();
     expect(env.data.history).toEqual([]);
@@ -119,7 +119,7 @@ test.describe('bad data never crashes the app', () => {
     await expect(page.locator('.notice')).toHaveCount(0);
     await tab(page, 'History').click();
     await expect(page.getByRole('button', { name: 'Download it' })).toBeVisible();
-    expect((await stored(page)).version).toBe(2);
+    expect((await stored(page)).version).toBe(3);
   });
 
   test('data from a newer version is left alone with a notice', async ({ page }) => {
@@ -142,7 +142,7 @@ test.describe('bad data never crashes the app', () => {
     await expect(page.locator('.notice')).toContainText('Export your data');
     // Not blocking: you can still use the app.
     await parseText(page, 'Burger 10.00');
-    await expect(page.getByLabel('Item name')).toHaveCount(1);
+    await expect(page.locator('.itemrow')).toHaveCount(1);
     await page.getByRole('button', { name: 'Dismiss' }).click();
     await expect(page.locator('.notice')).toHaveCount(0);
   });
@@ -188,7 +188,7 @@ test.describe('history', () => {
     await row.click();
     await page.getByRole('button', { name: 'Duplicate into new bill' }).click();
     await expect(page.getByRole('button', { name: 'Parse text' })).toBeVisible();
-    await expect(page.getByLabel('Item name')).toHaveCount(2);
+    await expect(page.locator('.itemrow')).toHaveCount(2);
     await expect(page.getByLabel('What was it?')).toHaveValue('Burger night');
 
     // The meal is still in history, and it survives a reload.
@@ -202,7 +202,7 @@ test.describe('history', () => {
     await page.getByRole('button', { name: 'New bill' }).click();
 
     // No confirm, nothing lost: the old bill is in History.
-    await expect(page.getByLabel('Item name')).toHaveCount(0);
+    await expect(page.locator('.itemrow')).toHaveCount(0);
     await tab(page, 'People').click();
     await expect(page.getByLabel('Sam is at this meal')).toBeChecked();
     await tab(page, 'History').click();
@@ -260,7 +260,7 @@ test.describe('your data', () => {
     const path = testInfo.outputPath('export.json');
     await download.saveAs(path);
     const file = JSON.parse(readFileSync(path, 'utf8'));
-    expect(file).toMatchObject({ app: 'mealsplit', version: 2 });
+    expect(file).toMatchObject({ app: 'mealsplit', version: 3 });
     expect(file.data.people.map((p: { name: string }) => p.name)).toEqual(['Sam']);
     expect(file.data.history).toHaveLength(1);
 

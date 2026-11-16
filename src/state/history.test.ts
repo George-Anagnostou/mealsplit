@@ -58,6 +58,15 @@ describe('history', () => {
     expect(saveCurrent(some, 5)).toHaveLength(1);
   });
 
+  test('stale source cannot be auto-saved into payable history', () => {
+    const s = makeState({
+      bill: { raw: 'burger 20', parsedRaw: 'burger 10', items: [item('i', 1000)] },
+      history: [meal('older', 1)],
+    });
+    expect(isWorthSaving(s)).toBe(false);
+    expect(saveCurrent(s, 5)).toBe(s.history);
+  });
+
   test('a meal remembers the friends who were there, not the whole list', () => {
     const s = makeState({
       people: [friend('sam'), friend('alex'), friend('kim')],

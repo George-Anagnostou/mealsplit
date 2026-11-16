@@ -40,12 +40,12 @@ Tap **Text · Apple Cash**.
 Tap **Copy · Zelle**.
 - [ ] A "Zelle text copied" toast shows.
 - [ ] Paste into Notes or Messages: it reads "Hey <name>, your share of <note> is $X.XX. Zelle it to <your contact>." (or the generic line if no contact is saved).
-- [ ] **Copy message** and **Copy summary for the group** paste correctly too, and the summary shows a discount as "discount -$X.XX".
+- [ ] **Copy message** and **Copy summary for the group** paste correctly too; the summary says "draft subtotal" and includes any unassigned signed amount.
 
 ## 6. Offline, install and updates
 - [ ] Open the app in Safari on Wi‑Fi, wait a few seconds, then turn on Airplane Mode and reload the tab: it loads. (One visit is enough; no second visit needed.)
 - [ ] Add to Home Screen, then close the app completely and relaunch it from the Home Screen in Airplane Mode: it loads, and your bill is still there.
-- [ ] You can still edit items and use the Split tab offline.
+- [ ] You can still edit source text, reparse, assign rows and use the Split tab offline.
 - [ ] Turn Airplane Mode off and the app keeps working.
 - [ ] The Home Screen icon fills its rounded square with no white edge, and the logo is not clipped.
 - [ ] Launched from the Home Screen there is no Safari bar. In Dark mode the status bar at the top is dark with light text, and in Light mode it is light with dark text. Nothing is hidden under it. The launch screen is plain (there are no splash images by design): note if the flash of colour bothers you.
@@ -53,13 +53,14 @@ Tap **Copy · Zelle**.
 
 ## 7. Dark mode
 - [ ] Settings → Display & Brightness → Dark: the app switches to its dark theme with no white flashes, and text is readable everywhere (Receipt, People, Assign, Split).
-- [ ] The highlighted rows (a low-confidence receipt line, a warning banner, the "owes nothing" box) are readable in both themes.
+- [ ] Parse errors, warning banners, credits and the "owes nothing" box are readable in both themes.
 - [ ] Switch back to Light and check it again.
 
 ## 8. Money edge cases (quick sanity)
 - [ ] A friend whose share is $0.00 shows "Owes nothing. No request needed.", and there are no Venmo, text or Zelle buttons on that card.
-- [ ] Enter a Discount bigger than the items: a warning explains that only the item total is applied, and no share goes negative.
-- [ ] After parsing a receipt that has a total, the line at the bottom of the Split tab says "receipt total $X ✓". A receipt with no total says there is nothing to check against.
+- [ ] Enter `burger 10` and `discount -20`, assign both to a friend: their share is -$10, shown as a credit with no payment request.
+- [ ] Enter `3x burger 10`, assign it to two friends: each receives 1.5 units and $15.
+- [ ] Split says "Draft subtotal" and "not verified", without a receipt-match tick. Printed total/subtotal lines must be removed from the input.
 
 ## 9. Saved data, history and export
 - [ ] Add a friend and fill in My details, then fully close the app and relaunch it from the Home Screen: they are still there, and so is the tab you were on.
@@ -75,20 +76,21 @@ Tap **Copy · Zelle**.
 - [ ] Rotate to landscape: nothing hides behind the notch or the sides (the content respects the safe areas).
 - [ ] Assign: tap an item and the people panel opens above Back / Next without covering the item list's end. Turn on **Select several**, tap two items, tap a person: both get them. **All** on a row, **Split the rest among everyone**, and **Undo** (button and toast) all behave.
 - [ ] Next on Assign reads **Split anyway** while anything is unassigned, and the Split step shows a warning with an **Assign it** button.
-- [ ] Type a Tax and a Tip, then parse the receipt again: they stay, marked **edited**, and the toast says so. **Let parsing replace it** hands them back.
+- [ ] Parsed rows are read-only. Change a price in the source: assignment and payment are blocked until reparsed. Reparse clears assignments; Undo restores the previous source, rows and assignments.
+- [ ] Enter an invalid line such as `fries 3.123`: a numbered error appears, and no partial draft replaces the existing one.
 - [ ] Toasts (Undo, "Split the rest…") appear at the bottom, just above Back / Next (above the people panel when it is open), clear of the home indicator, and never cover a step heading.
 - [ ] Turn on VoiceOver: step bar buttons read "current step"; each item reads its name, price and who shares it; the toast is announced.
 - [ ] Settings → Accessibility → Motion → Reduce Motion: no sliding or smooth scrolling in the app.
 - [ ] Settings → Display → Text Size larger: the layout still works, with nothing cut off.
 
-## 9. Scan a photo (OCR)
+## 11. Scan a photo (OCR)
 - [ ] Tap **Scan photo**, then **Photo Library**, and pick a HEIC photo of a receipt (a normal iPhone photo). It scans without a "can't read that image" error.
 - [ ] While it runs you see a progress bar with plain wording (Loading…, then Reading receipt…) and a **Cancel** button.
 - [ ] A receipt photo taken in portrait, and one taken in landscape, both read upright (the items appear in order).
-- [ ] The items fill in, the toast says how many were found, and the status line reminds you to check digits and totals.
+- [ ] Extracted text fills the editor without creating draft items. Format and correct it, remove summaries/payment lines, then tap **Parse text**.
 - [ ] Tap **Cancel** halfway: it says "Scan cancelled", the text box is untouched, and you can scan again.
 - [ ] Scan once while online, then turn on Airplane Mode and scan again: it works (the OCR files are cached the first time a scan loads them). Scanning for the very first time while offline should fail with a clear message, and pasting text still works.
-- [ ] Time a scan on your phone, from picking the photo to "Done": ______ seconds (first scan) and ______ seconds (second scan).
+- [ ] Time a scan on your phone, from picking the photo to "Text extracted": ______ seconds (first scan) and ______ seconds (second scan).
 
 ---
 

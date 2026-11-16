@@ -6,6 +6,9 @@ export interface Item {
   id: string;
   name: string;
   cents: number;
+  /** New text-format rows carry unit pricing. Older saved rows keep their original line amount. */
+  quantity?: number;
+  unitC?: number;
   /** Party ids (`ME` or a friend id) who had this item. */
   who: string[];
 }
@@ -37,6 +40,8 @@ export interface Bill {
   /** ISO date, yyyy-mm-dd */
   date: string;
   raw: string;
+  /** Input that produced the current draft. Missing only on older saved bills. */
+  parsedRaw?: string;
   items: Item[];
   taxC: number;
   feesC: number;
