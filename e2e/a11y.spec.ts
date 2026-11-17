@@ -21,7 +21,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await scan('empty receipt');
     await parseText(
       page,
-      'Burrito Bowl   $12.00\nChips   $6.00\nSoda   $3.00\nTax   $2.10\nTotal   $23.10',
+      '3x Burrito Bowl   $12.00\nChips   $6.00\nSoda   $3.00\nTax   $2.10\ncredit -1',
     );
     await scan('receipt with items');
     await addFriend(page, 'Sam', '@sam');

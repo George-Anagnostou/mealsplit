@@ -136,10 +136,15 @@ label.btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
 .progress { height: 6px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 6px; }
 .progress > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
 .warn { margin-top: var(--sp-3); background: var(--warn-bg); color: var(--warn); border-radius: var(--radius-sm); padding: var(--sp-3); font-size: var(--fs-sm); }
-.itemrow { display: grid; grid-template-columns: 1fr 96px var(--tap); gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-2); }
-.itemrow input { margin: 0; }
-.itemrow.lowconf input { border-color: var(--warn); background: var(--warn-bg); }
+.draft-items { list-style: none; margin: 0; padding: 0; }
+.itemrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-3); align-items: start; padding: var(--sp-3) 0; border-bottom: 1px solid var(--line); }
+.itemrow:last-child { border-bottom: 0; }
+.itemrow .nm, .parse-errors code { overflow-wrap: anywhere; }
+.itemrow small, .arow .nm small { display: block; color: var(--muted); font-size: var(--fs-xs); font-weight: 400; margin-top: var(--sp-1); }
 .itemrow .price { text-align: right; font-variant-numeric: tabular-nums; }
+.parse-errors { padding-left: var(--sp-5); margin-bottom: 0; }
+.parse-errors li + li { margin-top: var(--sp-3); }
+.parse-errors code { display: block; margin-top: var(--sp-1); }
 .tipbox { display: flex; gap: var(--sp-2); align-items: center; }
 .tipbox input { margin: var(--sp-1) 0 0; }
 .seg { display: inline-flex; margin-top: var(--sp-1); border: 1px solid var(--edge); border-radius: var(--radius-sm); overflow: hidden; flex: none; }

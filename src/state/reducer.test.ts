@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import type { ParsedReceipt } from '../core/parser';
+import { parseReceipt } from '../core/parser';
 import { defaultState } from './defaults';
 import { type Action, reducer } from './reducer';
 import { friend, item, makeState, meal, stamp } from './testing';
@@ -27,37 +27,23 @@ describe('bill editing', () => {
     expect(s.bill).toMatchObject({ title: 'Tacos', date: '2026-10-02', raw: 'x 1.00' });
   });
 
-  test('applyParsed replaces the items and fills the money fields', () => {
-    const parsed = {
-      items: [
-        { name: 'Bowl', cents: 1195, confidence: 1, reasons: [] },
-        { name: 'Soda', cents: 299, confidence: 1, reasons: [] },
-      ],
-      taxC: 100,
-      feesC: 200,
-      discountC: 300,
-      totalC: 1500,
-      hasTip: false,
-      tipC: 0,
-    } as unknown as ParsedReceipt;
+  test('applyParsed replaces the draft and clears all legacy adjustments', () => {
+    const parsed = parseReceipt('2 Bowl 11.95\nSoda 2.99');
     const s = reducer(makeState(), { type: 'applyParsed', parsed: parsed, ids: ['x', 'y'] });
     expect(s.bill.items).toEqual([
-      { id: 'x', name: 'Bowl', cents: 1195, who: [] },
-      { id: 'y', name: 'Soda', cents: 299, who: [] },
+      { id: 'x', name: 'Bowl', quantity: 2, unitC: 1195, cents: 2390, who: [] },
+      { id: 'y', name: 'Soda', quantity: 1, unitC: 299, cents: 299, who: [] },
     ]);
     expect(s.bill).toMatchObject({
-      taxC: 100,
-      feesC: 200,
-      discountC: 300,
-      parsedTotalC: 1500,
-      tipMode: 'pct',
+      taxC: 0,
+      feesC: 0,
+      discountC: 0,
+      parsedTotalC: null,
+      tipMode: 'amt',
+      tipAmtC: 0,
+      raw: parsed.source,
+      parsedRaw: parsed.source,
     });
-    const tipped = reducer(makeState(), {
-      type: 'applyParsed',
-      parsed: { ...parsed, hasTip: true, tipC: 450 } as ParsedReceipt,
-      ids: ['x', 'y'],
-    });
-    expect(tipped.bill).toMatchObject({ tipMode: 'amt', tipAmtC: 450 });
   });
 
   test('items: add, edit, remove', () => {

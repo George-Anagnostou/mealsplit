@@ -10,7 +10,7 @@ import {
   type SplitResult,
   UNASSIGNED,
 } from '../core/split';
-import { type AppState, type Bill, type EditableField, type Friend, ME, type Meal } from './types';
+import { type AppState, type Bill, type Friend, ME, type Meal } from './types';
 
 export interface Party {
   id: string;
@@ -31,6 +31,18 @@ export const friendById = (s: AppState, id: string): Friend | undefined =>
   s.people.find((p) => p.id === id);
 
 export const subtotalOf = (b: Bill): number => b.items.reduce((a, i) => a + (i.cents || 0), 0);
+/** Source edits must be reparsed before assigning, saving, or requesting payment. */
+export const draftIsStale = (b: Bill): boolean =>
+  b.parsedRaw !== undefined && b.raw !== b.parsedRaw;
+
+export const itemLabel = (item: Bill['items'][number]): string =>
+  item.quantity && item.quantity > 1 ? `${item.quantity}× ${item.name}` : item.name;
+
+/** Show short exact decimals; retain a fraction rather than round repeating quantities. */
+export const quantityShare = (quantity: number, people: number): string => {
+  const share = quantity / people;
+  return Number.isInteger(share * 100) ? String(share) : `${quantity}/${people}`;
+};
 export const tipOf = (b: Bill): number => computeTip(subtotalOf(b), b.tipMode, b.tipPct, b.tipAmtC);
 export const noteOf = (b: Bill): string => billNote(b.title || 'Dinner', b.date);
 export const grandTotalOf = (b: Bill): number =>
@@ -164,17 +176,3 @@ export const mealState = (s: AppState, m: Meal): AppState => ({
   people: m.people,
   bill: m.bill,
 });
-
-const FIELD_NAMES: Record<EditableField, string> = {
-  taxC: 'tax',
-  feesC: 'fees',
-  discountC: 'discount',
-  tip: 'tip',
-};
-
-/** "tax", "tax and tip", "tax, tip and fees": for messages about amounts you edited. */
-export function describeFields(fields: readonly EditableField[]): string {
-  const names = fields.map((f) => FIELD_NAMES[f]);
-  if (names.length < 2) return names.join('');
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-}

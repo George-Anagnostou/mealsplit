@@ -33,8 +33,3 @@ export async function addFriend(page: Page, name: string, venmo = '') {
   await form.getByLabel('Venmo').fill(venmo);
   await form.getByRole('button', { name: 'Add friend' }).click();
 }
-
-export async function setMoney(page: Page, label: string, value: string) {
-  await page.getByLabel(label, { exact: true }).fill(value);
-  await page.getByLabel(label, { exact: true }).blur();
-}

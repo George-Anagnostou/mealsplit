@@ -9,7 +9,7 @@ import {
 } from '../core/links';
 import { fmt } from '../core/money';
 import type { PartyTotals } from '../core/split';
-import { splitSummary } from '../state/selectors';
+import { draftIsStale, itemLabel, quantityShare, splitSummary } from '../state/selectors';
 import { useAppState } from '../state/store';
 import type { AppState, Friend } from '../state/types';
 import { Avatar } from './Avatar';
@@ -39,7 +39,13 @@ function PartyCard({ name, totals, friend, note, state }: CardProps) {
   if (owesNothing(totals.totalC)) {
     // No Venmo, Apple Cash or Zelle request for a $0 share (and none for yourself).
     actions = (
-      <div className="owes0">{isMe ? 'You owe nothing.' : 'Owes nothing. No request needed.'}</div>
+      <div className="owes0">
+        {totals.totalC < 0
+          ? `Credit of ${fmt(-totals.totalC)}. No request needed.`
+          : isMe
+            ? 'You owe nothing.'
+            : 'Owes nothing. No request needed.'}
+      </div>
     );
   } else if (friend) {
     const { me } = state;
@@ -81,8 +87,17 @@ function PartyCard({ name, totals, friend, note, state }: CardProps) {
         {totals.items.map((l) => (
           <div key={l.index}>
             <span>
-              {state.bill.items[l.index]?.name || 'Item'}
-              {l.of > 1 && <small> (1/{l.of})</small>}
+              {itemLabel(state.bill.items[l.index])}
+              {l.of > 1 && (
+                <small>
+                  {' '}
+                  (1/{l.of} of row
+                  {state.bill.items[l.index].quantity !== undefined
+                    ? ` · ${quantityShare(state.bill.items[l.index].quantity ?? 1, l.of)} units`
+                    : ''}
+                  )
+                </small>
+              )}
             </span>
             <span>{fmt(l.shareC)}</span>
           </div>
@@ -104,6 +119,14 @@ export function SplitBody({ state, onFix }: { state: AppState; onFix?: () => voi
   const copy = useCopy();
   const { bill } = state;
 
+  if (draftIsStale(bill)) {
+    return (
+      <div className="banner warn" role="status">
+        Input changed. Return to Receipt and parse text before splitting.
+      </div>
+    );
+  }
+
   if (!bill.items.length) {
     return <div className="empty">Nothing to split yet. Start on the Receipt step.</div>;
   }
@@ -113,7 +136,6 @@ export function SplitBody({ state, onFix }: { state: AppState; onFix?: () => voi
     note,
     meName,
     discountNotice: notice,
-    recon,
     unassigned,
     friends,
     meTotals,
@@ -125,7 +147,7 @@ export function SplitBody({ state, onFix }: { state: AppState; onFix?: () => voi
       totalC: r.expectedTotalC,
       rows: friends.map(({ party, totals }) => ({ name: party.name, ...totals })),
       meRow: meTotals ? { name: meName, totalC: meTotals.totalC } : null,
-    });
+    }) + (unassigned ? `\nUnassigned: ${fmt(unassigned.totalC)}` : '');
 
   return (
     <div>
@@ -134,11 +156,10 @@ export function SplitBody({ state, onFix }: { state: AppState; onFix?: () => voi
         <div className="banner warn" role="alert">
           <span>
             <b>
-              {unassigned.count} item{unassigned.count > 1 ? 's' : ''} ({fmt(unassigned.totalC)}{' '}
-              with tax/tip) still unassigned.
+              {unassigned.count} item{unassigned.count > 1 ? 's' : ''} ({fmt(unassigned.totalC)}){' '}
+              still unassigned.
             </b>{' '}
-            Nobody is being asked to pay for {unassigned.count > 1 ? 'them' : 'it'}, so the shares
-            below add up to less than the bill.
+            These rows are excluded from the assigned shares below.
           </span>
           {onFix && (
             <button type="button" className="small" onClick={onFix}>
@@ -170,21 +191,15 @@ export function SplitBody({ state, onFix }: { state: AppState; onFix?: () => voi
       {meTotals && (
         <PartyCard name={`${meName} (me)`} totals={meTotals} note={note} state={state} />
       )}
-      {recon.status === 'unknown' ? (
-        <div className="recon">
-          Shares add up to <b>{fmt(r.totalC)}</b> · no receipt total to check against
-        </div>
-      ) : (
-        <div className={`recon ${recon.status === 'match' ? 'ok' : 'bad'}`}>
-          Shares add up to <b>{fmt(r.totalC)}</b> · receipt total{' '}
-          <b>{fmt(bill.parsedTotalC ?? 0)}</b>{' '}
-          {recon.status === 'match' ? '✓' : `⚠ off by ${fmt(Math.abs(recon.diffC))}`}
-        </div>
-      )}
+      <div className="recon">
+        Draft subtotal <b>{fmt(r.totalC)}</b>
+        {unassigned ? ' (including unassigned rows)' : ''}. Compare with your receipt; not verified.
+      </div>
     </div>
   );
 }
 
 export function SplitView({ onFix }: { onFix: () => void }) {
-  return <SplitBody state={useAppState()} onFix={onFix} />;
+  const state = useAppState();
+  return <SplitBody state={state} onFix={onFix} />;
 }
