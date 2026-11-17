@@ -35,7 +35,11 @@ On iPhone: open the served page, then Share → Add to Home Screen. The service 
 
 Other scripts: `npm run test:e2e` (see below), `npm test`, `npm run test:coverage`, `npm run test:watch`, `npm run typecheck`, `npm run lint`, `npm run format` (Biome auto-fix).
 
-CI (`.github/workflows/ci.yml`) runs typecheck, lint, unit tests, a build and the e2e smoke test on every pull request (and on pushes to `main`). It has read-only permissions, no secrets, and never deploys.
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, unit tests, a build and the e2e smoke test on every pull request (and on pushes to `main`), and checks the deploy files (shellcheck, deploy script tests, `nginx -t`). It has read-only permissions, no secrets, and never deploys.
+
+## Deploy
+
+The app is hosted at `https://mealsplit.georgeanagnostou.com` as static files behind nginx on the same VPS as bookmarks. Deploys are manual from your machine: `make deploy` (or `npm run deploy`) checks, builds, uploads a new release and switches to it atomically; `make rollback` switches back. One-time server setup and the details are in [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Test
 
@@ -108,6 +112,8 @@ build/                      Vite plugins (copy and verify the OCR files; write s
 src/ui/                     React components: one view per tab, plus small shared pieces
 src/main.tsx  src/styles.css
 e2e/                        Playwright tests (playwright.config.ts at the root)
+deploy/nginx/               nginx site for the VPS
+scripts/                    deploy.sh (+ its server half and tests); see docs/DEPLOY.md
 ```
 
 ## Offline and install (PWA)
