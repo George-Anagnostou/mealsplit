@@ -96,6 +96,10 @@ verify_site() {
 		return 0
 	fi
 	echo "checking $URL"
+	if [ -n "${MEALSPLIT_EXPECTED_SHA:-}" ]; then
+		marker="$(curl -fsS --max-time 10 "$URL/release.json")" || die "release marker did not answer"
+		printf '%s\n' "$marker" | grep -Fq "\"commit\": \"$MEALSPLIT_EXPECTED_SHA\"" || die "live release does not match the tested commit"
+	fi
 	headers="$(curl -fsSI --max-time 10 "$URL/")" || die "$URL/ did not answer"
 	printf '%s\n' "$headers" | grep -qi '^cache-control: no-cache' || die "index.html is missing Cache-Control: no-cache"
 	headers="$(curl -fsSI --max-time 10 "$URL/sw.js")" || die "$URL/sw.js did not answer"
@@ -141,6 +145,10 @@ else
 	npm run build
 fi
 if [ ! -f "$DIST/index.html" ] || [ ! -f "$DIST/sw.js" ]; then die "$DIST/ is not a complete build; run npm run build"; fi
+if [ -n "${MEALSPLIT_EXPECTED_SHA:-}" ]; then
+	[ "$(git rev-parse HEAD)" = "$MEALSPLIT_EXPECTED_SHA" ] || die "checkout does not match the tested commit"
+	grep -Fq "\"commit\": \"$MEALSPLIT_EXPECTED_SHA\"" "$DIST/release.json" || die "artifact does not match the tested commit"
+fi
 
 echo "deploying $ID to $WHERE"
 LIVE="$(on_server prepare "$DEPLOY_PATH")"

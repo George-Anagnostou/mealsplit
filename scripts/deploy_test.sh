@@ -17,7 +17,7 @@ export MEALSPLIT_DEPLOY_PATH="$WORK/srv/mealsplit"
 export MEALSPLIT_SKIP_BUILD=1
 export MEALSPLIT_ALLOW_DIRTY=1
 export MEALSPLIT_KEEP_RELEASES=5
-unset MEALSPLIT_URL MEALSPLIT_DEPLOY_HOST MEALSPLIT_DEPLOY_USER
+unset MEALSPLIT_URL MEALSPLIT_DEPLOY_HOST MEALSPLIT_DEPLOY_USER MEALSPLIT_EXPECTED_SHA
 
 failures=0
 pass() { echo "ok - $1"; }
@@ -103,6 +103,16 @@ else
 	pass "refuses a build without sw.js"
 fi
 check "live site unchanged after a refused deploy" serving 8
+
+# CI must refuse an artifact from a different commit before uploading or switching.
+mismatch="$(make_build wrong)"
+printf '{ "commit": "wrong" }\n' >"$mismatch/release.json"
+if MEALSPLIT_EXPECTED_SHA="$(git -C "$ROOT_DIR" rev-parse HEAD)" MEALSPLIT_DIST_DIR="$mismatch" "$DEPLOY" >"$WORK/out.log" 2>&1; then
+	fail "refuses an artifact from another commit"
+else
+	check "refuses an artifact from another commit" grep -q "artifact does not match" "$WORK/out.log"
+fi
+check "live site unchanged after an artifact mismatch" serving 8
 
 # 7. Rollback stops at the oldest release.
 for _ in 1 2 3 4 5; do "$DEPLOY" rollback >"$WORK/out.log" 2>&1 || break; done

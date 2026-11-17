@@ -15,8 +15,9 @@ internet → nginx :443 (mealsplit.georgeanagnostou.com) → /var/www/mealsplit/
 | `/var/www/mealsplit/current` | Symlink to the live release; this is nginx's `root` |
 | `/var/www/mealsplit/acme/` | Webroot for this site's certificate challenges and renewals |
 
-Deploys are manual, from your Mac, like `make update` for bookmarks. Nothing in GitHub deploys,
-and no secrets are stored anywhere.
+Pushes to `main` and `preview` deploy automatically through GitHub Actions after all checks
+pass. See [RELEASES.md](RELEASES.md) for the everyday branch workflow, environment settings,
+and preview DNS/TLS setup. Manual deploy and rollback commands below remain available.
 
 ## One-time setup
 
@@ -116,7 +117,8 @@ make deploy        # or: npm run deploy
 Open copies of the app pick up the new version on their next visit: the service worker
 downloads it in the background and offers a Reload button.
 
-Run one deploy at a time.
+GitHub serializes deployments per branch and skips superseded commits. Run manual deployment
+or rollback only when that environment's Actions run has finished.
 
 ## Rollback and other commands
 
@@ -175,4 +177,4 @@ make test-deploy   # shellcheck + local-mode deploy tests (temp dir, no SSH)
 
 `MEALSPLIT_DEPLOY_LOCAL=1` makes `scripts/deploy.sh` deploy into `MEALSPLIT_DEPLOY_PATH` on this
 machine instead of over SSH (Linux only: the switch uses GNU `mv -T`, as on the VPS). CI runs
-these tests and `nginx -t` on the site config; it never deploys.
+these tests and `nginx -t` on production and preview configs before any automatic deployment.
