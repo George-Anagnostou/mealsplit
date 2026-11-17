@@ -98,7 +98,7 @@ describe('v1 -> v2 migration', () => {
     expect(b.items).toHaveLength(3); // the bare 42 is dropped
     expect(b.items[0]).toMatchObject({ name: 'No id or price', cents: 0, who: [] });
     expect(b.items[1]).toMatchObject({ id: 'x', name: 'Fish', cents: 0, who: ['p1', ME] });
-    expect(b.items[2].cents).toBe(0); // negative price is not allowed
+    expect(b.items[2].cents).toBe(-300); // signed credit rows survive normalization
     expect(b.items[2].who).toEqual([]);
     expect(new Set(b.items.map((i) => i.id)).size).toBe(3);
   });
@@ -181,6 +181,49 @@ describe('v2 data', () => {
       mkCtx(),
     );
     expect(s.history).toEqual([]);
+  });
+});
+
+describe('signed unit-price drafts', () => {
+  test('quantity, signed amounts, and the parsed source survive save/import/history normalization', () => {
+    const bill = {
+      id: 'bill',
+      raw: '3 burger 10\ncredit -2',
+      parsedRaw: '3 burger 10\ncredit -2',
+      items: [
+        { id: 'a', name: 'burger', quantity: 3, unitC: 1000, cents: 3000, who: ['me'] },
+        { id: 'b', name: 'credit', quantity: 1, unitC: -200, cents: -200, who: ['me'] },
+      ],
+    };
+    const state = ok(
+      JSON.stringify({
+        version: CURRENT_VERSION,
+        data: { bill, history: [{ bill, people: [], savedAt: 1 }] },
+      }),
+    ).state;
+    expect(state.bill).toMatchObject(bill);
+    expect(state.history[0].bill).toMatchObject(bill);
+  });
+
+  test('legacy line totals are not multiplied and invalid metadata cannot change the amount', () => {
+    const normalized = normalizeState(
+      {
+        bill: {
+          items: [
+            { name: '2× burger', cents: 2000 },
+            { name: 'invalid', quantity: 2, unitC: 999, cents: 2000 },
+            { name: 'fractional', quantity: 1.5, unitC: 100, cents: 150 },
+            { name: 'zero quantity', quantity: 0, unitC: 100, cents: 0 },
+            { name: 'bad unit', quantity: 1, unitC: '10', cents: 1000 },
+            { name: 'unsafe', cents: Number.MAX_VALUE },
+          ],
+        },
+      },
+      mkCtx(),
+    ).bill;
+    expect(normalized.items.map((item) => item.cents)).toEqual([2000, 2000, 150, 0, 1000, 0]);
+    expect(normalized.items.every((item) => item.quantity === undefined)).toBe(true);
+    expect(normalized.parsedRaw).toBeUndefined();
   });
 });
 

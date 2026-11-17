@@ -194,7 +194,7 @@ export function groupSummary({
   rows: GroupRow[];
   meRow?: { name: string; totalC: number } | null;
 }): string {
-  const lines = [`${note} — total ${fmt(totalC)}`];
+  const lines = [`${note} — draft subtotal ${fmt(totalC)}`];
   for (const r of rows) {
     const extras: string[] = [];
     if (r.taxC) extras.push(`tax ${fmt(r.taxC)}`);

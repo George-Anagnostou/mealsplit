@@ -11,10 +11,9 @@ export const UNDO_LIMIT = 30;
 export type Action =
   | { type: 'meta'; field: 'title' | 'date' | 'raw'; value: string }
   /**
-   * Replace the items and fill in the amounts from a parsed receipt. Amounts you edited by hand
-   * are kept unless `overwrite` is set. The previous bill is kept for Undo.
+   * Replace a complete draft from its source text. The previous bill is kept for Undo.
    */
-  | { type: 'applyParsed'; parsed: ParsedReceipt; ids: string[]; overwrite?: boolean }
+  | { type: 'applyParsed'; parsed: ParsedReceipt; ids: string[] }
   /** Forget which amounts were edited by hand, so the next parse fills them all in. */
   | { type: 'forgetEdits' }
   | { type: 'addItem'; id: string }
@@ -55,16 +54,6 @@ export type Action =
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 const sameWho = (a: Item[], b: Item[]) => a.every((it, i) => same(it.who, b[i].who));
 
-/** Which amounts a parse would change, as seen from the bill's current values. */
-export function keptEdits(b: Bill, p: ParsedReceipt): EditableField[] {
-  return b.edited.filter((f) => {
-    if (f === 'taxC') return b.taxC !== p.taxC;
-    if (f === 'feesC') return b.feesC !== p.feesC;
-    if (f === 'discountC') return b.discountC !== p.discountC;
-    return p.hasTip && (b.tipMode !== 'amt' || b.tipAmtC !== p.tipC);
-  });
-}
-
 export function reducer(s: AppState, a: Action): AppState {
   const b = s.bill;
   /** Edits that make older snapshots stale: Undo only covers a run of assignment changes. */
@@ -91,22 +80,35 @@ export function reducer(s: AppState, a: Action): AppState {
   switch (a.type) {
     case 'meta':
       // Typing a title or pasting text doesn't touch the items, so Undo stays available.
-      return { ...s, bill: { ...b, [a.field]: a.value } };
+      return {
+        ...s,
+        bill: {
+          ...b,
+          ...(a.field === 'raw' && b.parsedRaw === undefined ? { parsedRaw: b.raw } : {}),
+          [a.field]: a.value,
+        },
+      };
     case 'applyParsed': {
       const p = a.parsed;
-      const keep = (f: EditableField) => !a.overwrite && b.edited.includes(f);
+      if (p.errors.length) return s; // Never turn a partial parse into a payable bill.
       const next: Bill = {
         ...b,
-        items: p.items.map((i, n) => ({ id: a.ids[n], name: i.name, cents: i.cents, who: [] })),
-        taxC: keep('taxC') ? b.taxC : p.taxC,
-        feesC: keep('feesC') ? b.feesC : p.feesC,
-        discountC: keep('discountC') ? b.discountC : p.discountC,
-        parsedTotalC: p.totalC,
-        ...(p.hasTip && !keep('tip') ? { tipMode: 'amt' as const, tipAmtC: p.tipC } : {}),
-        edited: a.overwrite ? [] : b.edited,
+        raw: p.source,
+        parsedRaw: p.source,
+        items: p.items.map((i, n) => ({ ...i, id: a.ids[n], who: [] })),
+        // These fields remain readable for old saved meals only. New bills use ordinary rows.
+        taxC: 0,
+        feesC: 0,
+        discountC: 0,
+        tipMode: 'amt',
+        tipPct: 0,
+        tipAmtC: 0,
+        feesEven: false,
+        parsedTotalC: null,
+        edited: [],
       };
       // The old bill is the one thing Undo brings back (not older assignment history).
-      return { ...s, bill: next, undo: [b] };
+      return { ...s, bill: next, undo: [{ ...b, raw: b.parsedRaw ?? b.raw }] };
     }
     case 'forgetEdits':
       return { ...s, bill: { ...b, edited: [] } };

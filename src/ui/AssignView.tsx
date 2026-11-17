@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { fmt } from '../core/money';
 import { unassignedItems } from '../state/flow';
-import { nameOf, partiesOf, presentWho } from '../state/selectors';
+import {
+  draftIsStale,
+  itemLabel,
+  nameOf,
+  partiesOf,
+  presentWho,
+  quantityShare,
+} from '../state/selectors';
 import { useAppState, useDispatch } from '../state/store';
 import { Avatar } from './Avatar';
 import { useToast } from './Toast';
@@ -87,6 +94,17 @@ export function AssignView() {
     };
   else banner = { cls: 'banner', text: 'Everything is assigned ✓ Head to Split.' };
 
+  if (draftIsStale(bill)) {
+    return (
+      <div className="banner warn" role="status">
+        <span>Input changed. Parse text again before assigning the updated draft.</span>
+        <button type="button" onClick={() => dispatch({ type: 'setTab', tab: 'receipt' })}>
+          Edit receipt
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className={banner.cls} role={banner.cls === 'banner warn' ? 'status' : undefined}>
@@ -138,7 +156,7 @@ export function AssignView() {
           const names = who.map((id) => nameOf(state, id));
           return (
             <fieldset key={it.id} className={`arow${on ? ' sel' : ''}${who.length ? '' : ' none'}`}>
-              <legend className="sr">{`${it.name || 'Item'}, ${fmt(it.cents)}`}</legend>
+              <legend className="sr">{`${itemLabel(it) || 'Item'}, ${fmt(it.cents)}`}</legend>
               <button
                 type="button"
                 id={`arow-${it.id}`}
@@ -146,7 +164,14 @@ export function AssignView() {
                 aria-pressed={on}
                 onClick={() => pickItem(it.id)}
               >
-                <span className="nm">{it.name || 'Item'}</span>
+                <span className="nm">
+                  {itemLabel(it) || 'Item'}
+                  {who.length > 1 && it.quantity !== undefined && (
+                    <small>
+                      {quantityShare(it.quantity, who.length)} units each · split equally
+                    </small>
+                  )}
+                </span>
                 <span className="who" aria-hidden="true">
                   {who.map((id) => (
                     <Avatar key={id} name={nameOf(state, id)} small />

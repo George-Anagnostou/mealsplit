@@ -1,5 +1,6 @@
 import type { Step } from '../state/flow';
 import { nextStep, prevStep, STEPS, unassignedItems } from '../state/flow';
+import { draftIsStale } from '../state/selectors';
 import { useAppState, useDispatch } from '../state/store';
 
 const labelOf = (id: Step) => STEPS.find((s) => s.id === id)?.label ?? '';
@@ -36,6 +37,7 @@ export function FlowBar({ onSave }: Props) {
           type="button"
           className={open ? 'fwd warnbtn' : 'fwd primary'}
           onClick={() => go(next)}
+          disabled={draftIsStale(state.bill)}
         >
           {open ? `${labelOf(next)} anyway ›` : `Next: ${labelOf(next)} ›`}
         </button>
@@ -44,7 +46,7 @@ export function FlowBar({ onSave }: Props) {
         <button
           type="button"
           className="fwd primary"
-          disabled={state.bill.items.length === 0}
+          disabled={state.bill.items.length === 0 || draftIsStale(state.bill)}
           onClick={onSave}
         >
           Save to history

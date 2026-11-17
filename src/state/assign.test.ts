@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import type { ParsedReceipt } from '../core/parser';
-import { type Action, keptEdits, reducer, UNDO_LIMIT } from './reducer';
-import { describeFields } from './selectors';
+import { parseReceipt } from '../core/parser';
+import { type Action, reducer, UNDO_LIMIT } from './reducer';
+import { draftIsStale, quantityShare } from './selectors';
 import { friend, item, makeState } from './testing';
 import { type AppState, ME } from './types';
 
@@ -17,18 +17,7 @@ const table = () =>
     },
   });
 
-const parsed = (over: Partial<ParsedReceipt> = {}): ParsedReceipt =>
-  ({
-    items: [{ name: 'Bowl', cents: 1195, confidence: 1, reasons: [] }],
-    taxC: 100,
-    feesC: 200,
-    discountC: 300,
-    totalC: 1500,
-    hasTip: false,
-    tipC: 0,
-    warnings: [],
-    ...over,
-  }) as ParsedReceipt;
+const parsed = () => parseReceipt('Bowl 11.95');
 
 describe('multi-assign', () => {
   test('toggleWhoMany adds a person to every item that lacks them', () => {
@@ -159,7 +148,7 @@ describe('undo', () => {
   });
 });
 
-describe('edit tracking', () => {
+describe('legacy edit tracking and new text drafts', () => {
   test('typing an amount marks it edited, once', () => {
     const s = run(
       makeState(),
@@ -174,58 +163,50 @@ describe('edit tracking', () => {
     expect(s.bill.edited).toEqual(['taxC', 'tip', 'feesC', 'discountC']);
   });
 
-  test('parsing fills amounts you have not touched', () => {
-    const s = run(makeState(), {
-      type: 'applyParsed',
-      parsed: parsed({ hasTip: true, tipC: 450 }),
-      ids: ['x'],
-    });
-    expect(s.bill).toMatchObject({
-      taxC: 100,
-      feesC: 200,
-      discountC: 300,
-      tipMode: 'amt',
-      tipAmtC: 450,
-      edited: [],
-    });
-  });
-
-  test('parsing again keeps what you edited, and fills the rest', () => {
+  test('parsing clears old edits; negative rows are ordinary assignable items', () => {
     const s = run(
       makeState(),
       { type: 'money', field: 'taxC', cents: 999 },
       { type: 'tipPct', pct: 18 },
-      { type: 'applyParsed', parsed: parsed({ hasTip: true, tipC: 450 }), ids: ['x'] },
+      {
+        type: 'applyParsed',
+        parsed: parseReceipt('Bowl 10\ntip 3\ncredit -2'),
+        ids: ['x', 'y', 'z'],
+      },
     );
     expect(s.bill).toMatchObject({
-      taxC: 999, // kept
-      feesC: 200, // filled
-      discountC: 300, // filled
-      tipMode: 'pct', // kept: the tip was edited
-      tipPct: 18,
-      parsedTotalC: 1500, // always follows the receipt
-      edited: ['taxC', 'tip'],
+      taxC: 0,
+      feesC: 0,
+      discountC: 0,
+      tipMode: 'amt',
+      tipPct: 0,
+      tipAmtC: 0,
+      parsedTotalC: null,
+      edited: [],
     });
-    expect(s.bill.items).toHaveLength(1);
+    expect(s.bill.items).toHaveLength(3);
+    expect(s.bill.items[2].cents).toBe(-200);
   });
 
-  test('overwrite takes everything from the receipt and forgets the edits', () => {
-    const s = run(
-      makeState(),
-      { type: 'money', field: 'feesC', cents: 999 },
-      { type: 'applyParsed', parsed: parsed(), ids: ['x'], overwrite: true },
-    );
-    expect(s.bill).toMatchObject({ feesC: 200, edited: [] });
+  test('invalid input cannot replace an existing draft', () => {
+    const s = table();
+    expect(
+      reducer(s, {
+        type: 'applyParsed',
+        parsed: parseReceipt('Bowl 10\nbad line'),
+        ids: ['x'],
+      }),
+    ).toBe(s);
   });
 
-  test('forgetEdits lets the next parse fill everything', () => {
+  test('legacy forgetEdits and new parsing cannot leave hidden adjustments', () => {
     const s = run(
       makeState(),
       { type: 'money', field: 'taxC', cents: 999 },
       { type: 'forgetEdits' },
       { type: 'applyParsed', parsed: parsed(), ids: ['x'] },
     );
-    expect(s.bill).toMatchObject({ taxC: 100, edited: [] });
+    expect(s.bill).toMatchObject({ taxC: 0, edited: [] });
   });
 
   test('a new bill starts with nothing edited', () => {
@@ -237,33 +218,29 @@ describe('edit tracking', () => {
     expect(s.bill.edited).toEqual([]);
   });
 
-  test('keptEdits lists only edits the parse would have changed', () => {
-    const s = run(
-      makeState(),
-      { type: 'money', field: 'taxC', cents: 100 }, // same as the receipt
-      { type: 'money', field: 'feesC', cents: 5 }, // different
-      { type: 'tipPct', pct: 18 }, // receipt has no tip
-    );
-    expect(keptEdits(s.bill, parsed())).toEqual(['feesC']);
-    expect(keptEdits(s.bill, parsed({ hasTip: true, tipC: 450 }))).toEqual(['feesC', 'tip']);
-    const same = run(
-      s,
-      { type: 'tipMode', mode: 'amt' },
-      { type: 'tipAmt', cents: 450 },
-      { type: 'money', field: 'discountC', cents: 7 },
-    );
-    expect(keptEdits(same.bill, parsed({ hasTip: true, tipC: 450 }))).toEqual([
-      'feesC',
-      'discountC',
-    ]);
+  test('source edits mark drafts stale, including older saves; undo restores matching text', () => {
+    const initial = run(makeState(), { type: 'applyParsed', parsed: parsed(), ids: ['x'] });
+    expect(draftIsStale(initial.bill)).toBe(false);
+    const edited = run(initial, { type: 'meta', field: 'raw', value: 'new item 3' });
+    expect(draftIsStale(edited.bill)).toBe(true);
+    const updated = run(edited, {
+      type: 'applyParsed',
+      parsed: parseReceipt('new item 3'),
+      ids: ['y'],
+    });
+    const undone = run(updated, { type: 'undo' });
+    expect(undone.bill.raw).toBe('Bowl 11.95');
+    expect(draftIsStale(undone.bill)).toBe(false);
+    const legacy = makeState({ bill: { parsedRaw: undefined, raw: 'older text' } });
+    expect(draftIsStale(legacy.bill)).toBe(false);
+    const changed = run(legacy, { type: 'meta', field: 'raw', value: 'changed' });
+    expect(changed.bill.parsedRaw).toBe('older text');
+    expect(draftIsStale(changed.bill)).toBe(true);
   });
 
-  test('describeFields reads as a list', () => {
-    expect(describeFields([])).toBe('');
-    expect(describeFields(['taxC'])).toBe('tax');
-    expect(describeFields(['taxC', 'tip'])).toBe('tax and tip');
-    expect(describeFields(['taxC', 'feesC', 'discountC', 'tip'])).toBe(
-      'tax, fees, discount and tip',
-    );
+  test('fractional quantities are shown exactly', () => {
+    expect(quantityShare(3, 2)).toBe('1.5');
+    expect(quantityShare(4, 2)).toBe('2');
+    expect(quantityShare(1, 3)).toBe('1/3');
   });
 });

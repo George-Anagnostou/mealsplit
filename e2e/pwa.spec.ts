@@ -138,7 +138,7 @@ test('a scan works offline once the OCR files have been fetched', async ({ page,
 
   // Online: the first scan downloads the OCR files and the worker keeps them.
   await page.locator('input[type=file][accept="image/*"]').setInputFiles(RECEIPT);
-  await expect(page.locator('.status')).toContainText('Done.', { timeout: 100_000 });
+  await expect(page.locator('.status')).toContainText('Text extracted.', { timeout: 100_000 });
   expect((await cacheNames(page)).some((k) => k.startsWith('mealsplit-ocr-'))).toBe(true);
 
   // Offline: reload the app and scan again.
@@ -148,9 +148,9 @@ test('a scan works offline once the OCR files have been fetched', async ({ page,
   await page.reload();
   await expect(page.getByRole('button', { name: 'Example' })).toBeVisible();
   await page.locator('input[type=file][accept="image/*"]').setInputFiles(RECEIPT);
-  await expect(page.locator('.status')).toContainText('Done.', { timeout: 100_000 });
+  await expect(page.locator('.status')).toContainText('Text extracted.', { timeout: 100_000 });
   expect(await page.locator('textarea').inputValue()).toMatch(/Burrito/i);
-  await expect(page.getByLabel('Item name')).toHaveCount(3);
+  await expect(page.locator('.itemrow')).toHaveCount(0);
   expect(failed).toEqual([]);
 });
 
@@ -217,7 +217,7 @@ test.describe('updates', () => {
     expect(first).toMatch(/^mealsplit-shell-/);
 
     await page.getByRole('button', { name: 'Example' }).click();
-    await expect(page.getByLabel('Item name')).toHaveCount(5);
+    await expect(page.locator('.itemrow')).toHaveCount(4);
 
     shipped = true;
     await checkForUpdate(page);
@@ -226,7 +226,7 @@ test.describe('updates', () => {
     // Installed beside the old one, not replacing it: the open page keeps working as it was.
     await expect.poll(() => cacheNames(page)).toContain(`mealsplit-shell-${NEXT}`);
     expect(await cacheNames(page)).toContain(first);
-    await expect(page.getByLabel('Item name')).toHaveCount(5);
+    await expect(page.locator('.itemrow')).toHaveCount(4);
 
     // Reload: the new worker takes over, the page reloads once, the old cache is cleaned up
     // and the bill is still there.
@@ -234,7 +234,7 @@ test.describe('updates', () => {
     await expect.poll(() => cacheNames(page)).toEqual([`mealsplit-shell-${NEXT}`]);
     await expect(banner(page)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Example' })).toBeVisible();
-    await expect(page.getByLabel('Item name')).toHaveCount(5);
+    await expect(page.locator('.itemrow')).toHaveCount(4);
     expect(await controlled(page)).toBe(true);
   });
 

@@ -6,6 +6,7 @@ export const newBill = (stamp: Pick<Stamp, 'id' | 'today'>, here: string[] = [])
   title: '',
   date: stamp.today,
   raw: '',
+  parsedRaw: '',
   items: [],
   taxC: 0,
   feesC: 0,
