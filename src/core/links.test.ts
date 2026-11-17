@@ -55,7 +55,7 @@ test('group summary', () => {
     ],
     meRow: { name: 'Me', totalC: 1500 },
   });
-  expect(s).toMatch(/Tacos 10\/30 — total \$30\.00/);
+  expect(s).toMatch(/Tacos 10\/30 — draft subtotal \$30\.00/);
   expect(s).toMatch(/Sam: \$15\.00 {2}\(items \$12\.00 \+ tax \$1\.00, tip \$2\.00\)/);
   expect(s).toMatch(/Me: \$15\.00 \(not charged\)/);
 });
@@ -311,7 +311,7 @@ describe('groupSummary with a discount', () => {
   test('shows the discount as a deduction', () => {
     const s = groupSummary({ note: 'Tacos', totalC: 2200, rows: [row], meRow: null });
     expect(s).toBe(
-      'Tacos — total $22.00\nSam: $11.00  (items $12.00 + tax $1.00, discount -$2.00)',
+      'Tacos — draft subtotal $22.00\nSam: $11.00  (items $12.00 + tax $1.00, discount -$2.00)',
     );
   });
   test('a positive discount value reads the same way', () => {
@@ -327,7 +327,7 @@ describe('groupSummary with a discount', () => {
     });
     expect(noDisc).toContain('tax $1.00, tip $0.25, fees $0.50');
     expect(noDisc).not.toContain('discount');
-    expect(groupSummary({ note: 'x', totalC: 0, rows: [] })).toBe('x — total $0.00');
+    expect(groupSummary({ note: 'x', totalC: 0, rows: [] })).toBe('x — draft subtotal $0.00');
   });
   test('the me row is marked not charged', () => {
     expect(

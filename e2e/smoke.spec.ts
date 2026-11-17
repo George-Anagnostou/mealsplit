@@ -6,9 +6,9 @@ test('receipt → people → assign → split, and state survives a reload', asy
 
   await test.step('parse the example receipt', async () => {
     await page.getByRole('button', { name: 'Example' }).click();
-    await expect(page.getByLabel('Item name')).toHaveCount(5);
-    await expect(page.locator('.totals')).toContainText('Receipt total');
-    await expect(page.locator('.totals')).toContainText('$49.80');
+    await expect(page.locator('.itemrow')).toHaveCount(4);
+    await expect(page.locator('.totals')).toContainText('Draft subtotal');
+    await expect(page.locator('.totals')).toContainText('$34.22');
   });
 
   await test.step('add two friends', async () => {
@@ -27,11 +27,11 @@ test('receipt → people → assign → split, and state survives a reload', asy
 
   await test.step('assign items, including a shared one', async () => {
     await tab(page, 'Assign').click();
-    await assign(page, 'Burrito Bowl', ['Sam']);
-    await assign(page, 'Chips & Guacamole', ['Sam', 'Alex', 'George']); // shared three ways
-    await assign(page, 'Kids Quesadilla', ['George']);
-    await assign(page, 'Fountain Drink', ['Alex']);
-    await assign(page, 'Tacos', ['Alex']);
+    await assign(page, 'burger', ['Sam', 'Alex']); // 3 burgers / 2 people = 1.5 each
+    await expect(page.getByRole('group', { name: /burger/ })).toContainText('1.5 units each');
+    await assign(page, 'fries', ['George']);
+    await assign(page, 'tip', ['Sam', 'Alex', 'George']);
+    await assign(page, 'discount', ['Sam', 'Alex']);
     await expect(page.locator('.banner')).toContainText('Everything is assigned');
   });
 
@@ -41,13 +41,16 @@ test('receipt → people → assign → split, and state survives a reload', asy
     await expect(cards).toHaveCount(3);
 
     const totals = await cards.locator('h2 .big').allInnerTexts();
-    expect(totals.map(cents).reduce((a, b) => a + b, 0)).toBe(4980);
-    await expect(page.locator('.recon')).toContainText('$49.80 ✓');
+    expect(totals.map(cents).reduce((a, b) => a + b, 0)).toBe(3422);
+    await expect(page.locator('.recon')).toContainText('Draft subtotal $34.22');
+    await expect(page.locator('.recon')).not.toContainText('✓');
 
-    // The shared item appears on all three cards as 1/3.
-    for (let i = 0; i < 3; i++) await expect(cards.nth(i)).toContainText('(1/3)');
+    // Every row, including tip and the negative credit, is split by its chosen people.
+    for (let i = 0; i < 3; i++) await expect(cards.nth(i)).toContainText('(1/3 of row');
 
     const sam = cards.filter({ hasText: 'Sam' });
+    await expect(sam).toContainText('1.5 units');
+    await expect(sam).toContainText('-$1.00');
     const href = await sam.getByRole('link', { name: 'Request on Venmo' }).getAttribute('href');
     const url = new URL(href ?? '');
     expect(url.origin + url.pathname).toBe('https://venmo.com/');
@@ -59,25 +62,27 @@ test('receipt → people → assign → split, and state survives a reload', asy
 
   await test.step('reload keeps the state', async () => {
     await page.reload();
-    await expect(page.getByLabel('Item name')).toHaveCount(5);
-    await expect(page.locator('.totals')).toContainText('$49.80');
+    await expect(page.locator('.itemrow')).toHaveCount(4);
     await tab(page, 'People').click();
     await expect(page.locator('.friend')).toHaveCount(2);
     await tab(page, 'Split').click();
     await expect(page.locator('.pcard')).toHaveCount(3);
-    await expect(page.locator('.recon')).toContainText('$49.80 ✓');
+    await expect(page.locator('.recon')).toContainText('$34.22');
   });
 });
 
-test('typing a price keeps what was typed', async ({ page }) => {
+test('source text is the only item editor and preserves unfinished input', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Example' }).click();
-  const price = page.getByLabel('Price').first();
-  await price.fill('');
-  await price.pressSequentially('12.');
-  await expect(price).toHaveValue('12.');
-  await price.pressSequentially('5');
-  await expect(price).toHaveValue('12.5');
+  await expect(page.locator('.itemrow input')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Add item|Remove item/ })).toHaveCount(0);
+  const text = page.getByLabel('Receipt text');
+  await text.fill('burger 12.');
+  await expect(text).toHaveValue('burger 12.');
+  await text.pressSequentially('5');
+  await expect(text).toHaveValue('burger 12.5');
+  await page.getByRole('button', { name: 'Parse text' }).click();
+  await expect(page.locator('.itemrow')).toContainText('$12.50');
 });
 
 test('the web manifest loads', async ({ page, request }) => {
@@ -101,7 +106,7 @@ test('the app shell works offline for a returning visitor', async ({ page, conte
   await context.setOffline(true);
   await page.reload();
   await page.getByRole('button', { name: 'Example' }).click();
-  await expect(page.getByLabel('Item name')).toHaveCount(5);
+  await expect(page.locator('.itemrow')).toHaveCount(4);
 });
 
 // The service worker precaches the whole shell when it installs, so one visit is enough.
@@ -111,7 +116,7 @@ test('the app shell works offline after a single visit', async ({ page, context 
   await context.setOffline(true);
   await page.reload();
   await page.getByRole('button', { name: 'Example' }).click();
-  await expect(page.getByLabel('Item name')).toHaveCount(5);
+  await expect(page.locator('.itemrow')).toHaveCount(4);
 });
 
 test('the service worker registers (all browsers)', async ({ page }) => {

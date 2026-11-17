@@ -1,85 +1,34 @@
-import { useRef } from 'react';
-import { toCents } from '../core/money';
-import { uid } from '../state/ids';
-import { useAppState, useDispatch } from '../state/store';
-import { DecimalInput } from './DecimalInput';
-import { moneyFormat } from './format';
+import { fmt } from '../core/money';
+import { draftIsStale, itemLabel } from '../state/selectors';
+import { useAppState } from '../state/store';
 
-interface Props {
-  /** Rows the parser was unsure about; a row is cleared once you edit it. */
-  unsure: ReadonlySet<string>;
-  onSettle: (id: string) => void;
-}
-
-export function ItemsCard({ unsure, onSettle }: Props) {
+export function ItemsCard() {
   const { bill } = useAppState();
-  const dispatch = useDispatch();
-  const focusItem = useRef<string | null>(null);
-
   return (
     <div className="card">
-      <h2>Items</h2>
-      {bill.items.length ? (
-        bill.items.map((it) => (
-          <div
-            className={unsure.has(it.id) ? 'itemrow lowconf' : 'itemrow'}
-            key={it.id}
-            title={
-              unsure.has(it.id) ? 'Not sure I read this line right. Please check it.' : undefined
-            }
-          >
-            <input
-              className="nm"
-              ref={(el) => {
-                if (el && focusItem.current === it.id) {
-                  focusItem.current = null;
-                  el.focus();
-                }
-              }}
-              value={it.name}
-              placeholder="Item"
-              aria-label="Item name"
-              onChange={(e) => {
-                onSettle(it.id);
-                dispatch({ type: 'editItem', id: it.id, patch: { name: e.target.value } });
-              }}
-            />
-            <DecimalInput
-              className="price"
-              placeholder="0.00"
-              aria-label="Price"
-              value={it.cents}
-              parse={toCents}
-              format={moneyFormat}
-              onValue={(cents) => {
-                onSettle(it.id);
-                dispatch({ type: 'editItem', id: it.id, patch: { cents } });
-              }}
-            />
-            <button
-              type="button"
-              className="x ghost"
-              aria-label="Remove item"
-              onClick={() => dispatch({ type: 'removeItem', id: it.id })}
-            >
-              ✕
-            </button>
-          </div>
-        ))
+      <h2>Draft items</h2>
+      {draftIsStale(bill) ? (
+        <p className="hint" role="status">
+          Input changed. Parse text to update the draft before assigning or splitting.
+        </p>
+      ) : bill.items.length ? (
+        <>
+          <p className="hint">To correct a row, edit the receipt text and parse again.</p>
+          <ul className="draft-items" aria-label="Draft items">
+            {bill.items.map((it) => (
+              <li className="itemrow" key={it.id}>
+                <span className="nm">
+                  {itemLabel(it)}
+                  {it.unitC !== undefined && <small>{fmt(it.unitC)} each</small>}
+                </span>
+                <span className="price">{fmt(it.cents)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
       ) : (
-        <p className="hint">No items yet. Paste or scan a receipt, or add items by hand.</p>
+        <p className="hint">Enter one item per line, then choose Parse text.</p>
       )}
-      <button
-        type="button"
-        className="ghost"
-        onClick={() => {
-          const id = uid();
-          focusItem.current = id;
-          dispatch({ type: 'addItem', id });
-        }}
-      >
-        ＋ Add item
-      </button>
     </div>
   );
 }

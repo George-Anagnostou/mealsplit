@@ -1,5 +1,5 @@
 // The four steps of a bill, in order, and what is left to do in each. Pure: no React, no storage.
-import { presentWho } from './selectors';
+import { draftIsStale, presentWho } from './selectors';
 import type { AppState, Item, Tab } from './types';
 
 export type Step = 'receipt' | 'people' | 'assign' | 'split';
@@ -30,7 +30,7 @@ export const unassignedItems = (s: AppState): Item[] =>
 
 /** Which steps look finished, for the check marks on the step bar. */
 export function stepsDone(s: AppState): Record<Step, boolean> {
-  const hasItems = s.bill.items.length > 0;
+  const hasItems = s.bill.items.length > 0 && !draftIsStale(s.bill);
   return {
     receipt: hasItems,
     people: s.bill.here.length > 0,

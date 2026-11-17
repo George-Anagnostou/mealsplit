@@ -4,7 +4,7 @@
 - Simple and clean over clever. Small modules, clear names, no framework unless it earns its keep.
 - Personal first. Phase 1 is a polished tool for one user (George). Nothing in Phase 1 should block a later multi-user version, but nothing gets built for it early either.
 - Keep the core logic pure. Split math, parsing, and link building are plain functions with no DOM or storage access, fully unit-tested. The UI and storage sit on top.
-- Rules first, model second. The rules-based parser is the default; a cheap model is only a fallback for receipts the rules can't read.
+- Explicit text first. Parse `[quantity] name signed-unit-price`; OCR supplies editable text. Recognition improvements are deferred.
 - Never touch money. The app calculates and creates requests. Payment happens in Venmo, Apple Cash, or Zelle.
 - Nothing goes to production without George's review and approval.
 
@@ -21,14 +21,17 @@ Goal: an app George uses for real meals, which is fast, reliable, and pleasant.
    - Split the code into `core/` (split, parser, links; pure), `state/` (one store with explicit actions), `storage/` (a small adapter over localStorage, with versioned schema and migrations), and `ui/` (views per step).
    - Use a typed codebase (TypeScript or JSDoc types checked by `tsc`), with a lint and format setup and a single `npm run check`.
    - Bundle third-party code (the OCR library) locally or pin it with a fixed version and subresource-integrity hash. No unpinned CDN scripts. (Done: tesseract.js 7.0.0 and its files are served from the app's own origin; a test fails if a CDN URL appears.)
-2. Core flow polish (done: step bar with Back/Next, multi-select, undo, unassigned warnings, edit-tracked amounts, accessibility pass)
+2. Core flow polish (done: step bar with Back/Next, multi-select, undo, unassigned warnings, source-only editing, accessibility pass)
    - The steps are receipt, people, assign, split, and request, with a clear progress indicator and back/next.
    - Fast assignment: multi-select, "split among everyone", and undo.
-   - Clear reconciliation: a visible check that shares sum to the receipt total, plus unassigned-item warnings.
-   - Editable tip ($ or %), tax, fees, discounts, and an "even fees" toggle.
-3. Parser quality
-   - Grow the fixture set with real receipts (restaurant, DoorDash, Uber Eats, Grubhub, Toast and Square printouts).
-   - Give each parsed line a confidence score, and highlight low-confidence lines for review.
+   - Shares reconcile to the calculated draft subtotal; no claim of matching a printed receipt.
+   - Tax, tip, fees and discounts are ordinary assignable rows, with negative prices allowed.
+   - Grouped quantities split fractionally: three burgers shared by two friends allocate 1.5 each.
+3. Simple text parser
+   - Optional whole-number quantity, required name and signed unit price (integer or up to two decimals).
+   - Read-only draft rows; corrections happen in source text, followed by an explicit reparse.
+   - Numbered errors block partial drafts; source changes block assignment/payment until reparsed.
+   - Defer numeric-leading name ambiguity and OCR recognition improvements.
 4. Payments
    - Confirm the Venmo charge link format on a real iPhone, keep the `venmo://` fallback, and copy-text as a last resort.
    - Apple Cash: a prefilled iMessage via `sms:`. Zelle: copyable text with the amount.
@@ -39,10 +42,11 @@ Goal: an app George uses for real meals, which is fast, reliable, and pleasant.
    - Offline-capable PWA (precached shell, update prompt, OCR cached on first use), installable on iOS, light and dark mode.
 7. Optional: model fallback (behind a flag, off by default)
    - A tiny serverless function holds the API key, gated by a passcode or Cloudflare Access, with rate limits.
-   - It's a cheap vision model (e.g. Gemini Flash or GPT-4o-mini) that returns the same JSON shape as the rules parser.
-   - It's only called when the rules parser's confidence is low, or on request.
+   - A future vision model could produce editable text in the supported format for user review.
+   - Recognition work is deferred; any model use would be explicitly requested.
 
-Hosting: George will set up a subdomain on his own site later. Until then, it isn't deployed.
+Hosting: static files on the VPS behind nginx. GitHub Actions deploys tested `main` and `preview`
+builds to separate sites. See [RELEASES.md](RELEASES.md); preview needs its DNS/TLS setup completed.
 
 ## Phase 2: multi-user foundation (later, only if pursued)
 - Accounts via email magic link or Sign in with Apple/Google.
@@ -58,5 +62,5 @@ Hosting: George will set up a subdomain on his own site later. Until then, it is
 - An App Store wrapper is only worth it if the web app proves itself.
 
 ## Open questions
-- Subdomain and host (George to set up).
+- Complete preview DNS/TLS, then review and promote the parser release.
 - Whether to add the model fallback in Phase 1 or wait.

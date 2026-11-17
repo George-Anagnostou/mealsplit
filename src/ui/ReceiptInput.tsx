@@ -1,36 +1,20 @@
 import { useRef, useState } from 'react';
-import { isLowConfidence, parseReceipt } from '../core/parser';
+import { type ParseError, parseReceipt } from '../core/parser';
 import { ScanCancelled, scanReceipt } from '../ocr/ocr';
 import { uid } from '../state/ids';
-import { keptEdits } from '../state/reducer';
-import { describeFields } from '../state/selectors';
 import { useAppState, useDispatch } from '../state/store';
 import { useToast } from './Toast';
 
-const EXAMPLE = `Order from Chipotle
-1x Burrito Bowl - Chicken   $11.95
-2x Chips & Guacamole   $8.90
-1x Kids Quesadilla   $5.45
-1x Fountain Drink   $2.99
-1x Tacos (3)   $10.50
-Subtotal   $39.79
-Delivery Fee   $1.99
-Service Fee   $4.40
-Estimated Tax   $3.62
-Promo   -$5.00
-Dasher Tip   $5.00
-Total   $49.80`;
+const EXAMPLE = `3x burger $10.00
+1 fries 3
+tip $3.22
+discount -$2`;
 
-interface Props {
-  /** Ids of rows the parser was unsure about (cleared when the receipt is parsed again). */
-  onUnsure: (ids: string[]) => void;
-}
-
-export function ReceiptInput({ onUnsure }: Props) {
+export function ReceiptInput() {
   const { bill } = useAppState();
   const dispatch = useDispatch();
   const toast = useToast();
-  const [warnings, setWarnings] = useState<string[]>([]);
+  const [errors, setErrors] = useState<ParseError[]>([]);
   const [ocr, setOcr] = useState<{ message: string; progress?: number; busy?: boolean } | null>(
     null,
   );
@@ -38,24 +22,21 @@ export function ReceiptInput({ onUnsure }: Props) {
 
   const parse = (text: string) => {
     const parsed = parseReceipt(text);
+    setErrors(parsed.errors);
+    if (parsed.errors.length) return;
     const ids = parsed.items.map(uid);
-    // Anything typed into tax, tip, fees or discount stays; say so. Replacing existing items
-    // is undoable, since that can throw away assignments.
-    const kept = keptEdits(bill, parsed);
     const replaced = bill.items.length > 0;
     dispatch({ type: 'applyParsed', parsed, ids });
-    onUnsure(ids.filter((_, i) => isLowConfidence(parsed.items[i])));
-    setWarnings(parsed.warnings);
     const n = parsed.items.length;
     toast(
-      `${n} item${n === 1 ? '' : 's'} found${kept.length ? `. Kept your ${describeFields(kept)}` : ''}`,
+      `${n} draft item${n === 1 ? '' : 's'}${replaced ? '. Assign these rows again' : ''}`,
       replaced ? { label: 'Undo', onClick: () => dispatch({ type: 'undo' }) } : undefined,
     );
   };
 
   const onExample = () => {
     dispatch({ type: 'meta', field: 'raw', value: EXAMPLE });
-    if (!bill.title) dispatch({ type: 'meta', field: 'title', value: 'Burritos' });
+    if (!bill.title) dispatch({ type: 'meta', field: 'title', value: 'Burgers' });
     parse(EXAMPLE);
   };
 
@@ -72,8 +53,8 @@ export function ReceiptInput({ onUnsure }: Props) {
         ctl.signal,
       );
       dispatch({ type: 'meta', field: 'raw', value: text });
-      parse(text);
-      setOcr({ message: 'Done. OCR can misread digits, so check each item and the totals below.' });
+      setErrors([]);
+      setOcr({ message: 'Text extracted. Check and format each line, then choose Parse text.' });
     } catch (err) {
       if (err instanceof ScanCancelled) {
         setOcr({ message: 'Scan cancelled. You can still paste the text.' });
@@ -91,15 +72,31 @@ export function ReceiptInput({ onUnsure }: Props) {
   return (
     <div className="card">
       <h2>Receipt</h2>
+      <p className="hint" id="receipt-format">
+        One row: <code>[quantity] name unit-price</code>. For example, <code>2x burger 10</code>.
+        Use negative prices for credits: <code>discount -2</code>. Every row is assigned the same
+        way, including tax and tip. Remove printed subtotal and total lines to avoid counting twice.
+      </p>
       <textarea
-        rows={5}
-        placeholder="Paste receipt text here…"
+        rows={6}
+        placeholder={'2x burger $10.00\n1 fries 3\ntip $3.22'}
         aria-label="Receipt text"
+        aria-describedby="receipt-format"
+        aria-invalid={errors.length > 0}
+        disabled={scanning}
         value={bill.raw}
-        onChange={(e) => dispatch({ type: 'meta', field: 'raw', value: e.target.value })}
+        onChange={(e) => {
+          setErrors([]);
+          dispatch({ type: 'meta', field: 'raw', value: e.target.value });
+        }}
       />
       <div className="btns">
-        <button type="button" className="primary" onClick={() => parse(bill.raw)}>
+        <button
+          type="button"
+          className="primary"
+          disabled={scanning}
+          onClick={() => parse(bill.raw)}
+        >
           Parse text
         </button>
         <label className="btn" aria-disabled={scanning}>
@@ -116,7 +113,7 @@ export function ReceiptInput({ onUnsure }: Props) {
             }}
           />
         </label>
-        <button type="button" className="ghost" onClick={onExample}>
+        <button type="button" className="ghost" disabled={scanning} onClick={onExample}>
           Example
         </button>
       </div>
@@ -144,7 +141,19 @@ export function ReceiptInput({ onUnsure }: Props) {
           )}
         </div>
       )}
-      {warnings.length > 0 && <div className="warn">{warnings.join(' ')}</div>}
+      {errors.length > 0 && (
+        <div className="warn" role="alert">
+          <b>Fix these lines, then parse again. The draft has not been replaced.</b>
+          <ul className="parse-errors">
+            {errors.map((error) => (
+              <li key={error.line}>
+                <b>Line {error.line}:</b> {error.message}
+                {error.text && <code>{error.text}</code>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

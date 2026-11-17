@@ -1,10 +1,12 @@
+import { draftIsStale } from './selectors';
 import type { AppState, Meal } from './types';
 
 /** How many past meals are kept. */
 export const HISTORY_LIMIT = 20;
 
-/** A bill is worth keeping once it has at least one item. */
-export const isWorthSaving = (s: AppState): boolean => s.bill.items.length > 0;
+/** Only a complete, current draft belongs in payable history. */
+export const isWorthSaving = (s: AppState): boolean =>
+  s.bill.items.length > 0 && !draftIsStale(s.bill);
 
 /** Snapshot the current bill, with the friends who were at it. */
 export const mealFrom = (s: AppState, now: number): Meal => ({

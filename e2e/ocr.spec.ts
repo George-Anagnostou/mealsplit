@@ -45,7 +45,7 @@ test('nothing OCR-related loads until a photo is chosen', async ({ page }) => {
   expect(urls.filter((u) => u.includes('/ocr/') || /tesseract/i.test(u))).toEqual([]);
 });
 
-test('scanning a photo runs OCR on this device and fills in the receipt', async ({
+test('scanning extracts editable text without automatically turning OCR into bill items', async ({
   page,
 }, info) => {
   test.setTimeout(120_000);
@@ -56,16 +56,16 @@ test('scanning a photo runs OCR on this device and fills in the receipt', async 
 
   const status = page.locator('.status');
   await expect(status).toContainText(/Preparing|Loading|Reading/);
-  await expect(status).toContainText('Done.', { timeout: 100_000 });
+  await expect(status).toContainText('Text extracted.', { timeout: 100_000 });
   const seconds = (Date.now() - started) / 1000;
   console.log(`[${info.project.name}] real OCR took ${seconds.toFixed(1)}s`);
 
-  // The text and the parsed items come from the photo.
+  // OCR fills the source; the user formats it and explicitly parses it.
   const text = await page.locator('textarea').inputValue();
   expect(text).toMatch(/Burrito/i);
   expect(text).toContain('11.95');
   expect(text).toContain('2.99');
-  await expect(page.getByLabel('Item name')).toHaveCount(3);
+  await expect(page.locator('.itemrow')).toHaveCount(0);
 
   // Every request stayed on this origin, and the files came from /ocr/.
   const origin = new URL(page.url()).origin;
@@ -82,11 +82,11 @@ test('a photo saved sideways (EXIF orientation) is read upright', async ({ page 
   test.setTimeout(120_000);
   await page.goto('/');
   await photo(page).setInputFiles(ROTATED);
-  await expect(page.locator('.status')).toContainText('Done.', { timeout: 100_000 });
+  await expect(page.locator('.status')).toContainText('Text extracted.', { timeout: 100_000 });
   const text = await page.locator('textarea').inputValue();
   expect(text).toMatch(/Burrito/i);
   expect(text).toContain('11.95');
-  await expect(page.getByLabel('Item name')).toHaveCount(3);
+  await expect(page.locator('.itemrow')).toHaveCount(0);
 });
 
 test('a scan can be cancelled', async ({ page }) => {
@@ -120,7 +120,7 @@ test.describe('when the OCR files cannot load', () => {
 
     await page.locator('textarea').fill('Soda   $3.00');
     await page.getByRole('button', { name: 'Parse text' }).click();
-    await expect(page.getByLabel('Item name')).toHaveCount(1);
+    await expect(page.locator('.itemrow')).toHaveCount(1);
   });
 });
 

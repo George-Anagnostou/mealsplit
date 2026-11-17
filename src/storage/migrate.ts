@@ -12,7 +12,7 @@ import {
 } from '../state/types';
 
 /** Bump this when the saved shape changes, and add a migration from the old version. */
-export const CURRENT_VERSION = 2;
+export const CURRENT_VERSION = 3;
 
 export interface Ctx {
   /** Makes an id for anything that arrives without one. Injectable so tests are deterministic. */
@@ -29,6 +29,10 @@ const isObj = (v: unknown): v is Json => typeof v === 'object' && v !== null && 
 const str = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d);
 const num = (v: unknown, d = 0): number => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const cents = (v: unknown): number => Math.max(0, Math.round(num(v)));
+const signedCents = (v: unknown): number => {
+  const rounded = Math.round(num(v));
+  return Number.isSafeInteger(rounded) ? rounded : 0;
+};
 const strings = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
 const objects = (v: unknown): Json[] => (Array.isArray(v) ? v.filter(isObj) : []);
@@ -64,12 +68,25 @@ function bill(v: unknown, people: Friend[], ctx: Ctx): Bill {
     title: str(src.title),
     date: isoDate(src.date, d.date),
     raw: str(src.raw),
-    items: objects(src.items).map((it) => ({
-      id: freshId(it.id, seen, ctx),
-      name: str(it.name),
-      cents: cents(it.cents),
-      who: strings(it.who).filter((w) => w === ME || ids.has(w)),
-    })),
+    ...(typeof src.parsedRaw === 'string' ? { parsedRaw: src.parsedRaw } : {}),
+    items: objects(src.items).map((it) => {
+      const amount = signedCents(it.cents);
+      const quantity = num(it.quantity);
+      const unitC = num(it.unitC, NaN);
+      // Never infer a quantity from an old display name or multiply an old line total.
+      const priced =
+        Number.isSafeInteger(quantity) &&
+        quantity > 0 &&
+        Number.isSafeInteger(unitC) &&
+        quantity * unitC === amount;
+      return {
+        id: freshId(it.id, seen, ctx),
+        name: str(it.name),
+        cents: amount,
+        ...(priced ? { quantity, unitC } : {}),
+        who: strings(it.who).filter((w) => w === ME || ids.has(w)),
+      };
+    }),
     taxC: cents(src.taxC),
     feesC: cents(src.feesC),
     discountC: cents(src.discountC),
@@ -133,6 +150,9 @@ const MIGRATIONS: Record<number, (data: Json, ctx: Ctx) => Json> = {
     history: [],
     tab: 'receipt',
   }),
+  // v3 adds signed unit-price rows and the source snapshot. Keep old bill amounts intact:
+  // their quantities were only display text, and their adjustments used different splitting.
+  2: (d) => d,
 };
 
 /** Upgrade `data` from `from` to the current version. */
