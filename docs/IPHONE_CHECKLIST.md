@@ -2,7 +2,7 @@
 
 A short manual pass for the things automated tests can't prove: they need a real iPhone, Safari, and the Venmo and Messages apps. Run it before relying on a new build, and after any change to links, the service worker, or the manifest.
 
-**You need:** an iPhone with Venmo installed and signed in, an HTTPS URL for the build (no hosting yet: [`TRY_ON_IPHONE.md`](TRY_ON_IPHONE.md) shows how to serve one from your Mac with mkcert), and a friend (or a second contact of your own) to test with. Service workers and Add to Home Screen only work over HTTPS, so a plain `http://` address on your Wi‑Fi won't do. Don't tap **Send** on anything unless you mean it. Every check below stops at a pre-filled screen.
+**You need:** an iPhone with Venmo installed and signed in, the preview or production HTTPS URL from [`RELEASES.md`](RELEASES.md), and a friend (or a second contact of your own) to test with. [`TRY_ON_IPHONE.md`](TRY_ON_IPHONE.md) also explains local testing. Don't tap **Send** on anything unless you mean it. Every check below stops at a pre-filled screen.
 
 **Setup:** open the app in Safari, tap **Example** on the Receipt tab, add a friend on the People tab with a real Venmo username and phone number, assign a few items on the Assign tab, and open the Split tab.
 

@@ -45,7 +45,8 @@ Goal: an app George uses for real meals, which is fast, reliable, and pleasant.
    - A future vision model could produce editable text in the supported format for user review.
    - Recognition work is deferred; any model use would be explicitly requested.
 
-Hosting: George will set up a subdomain on his own site later. Until then, it isn't deployed.
+Hosting: static files on the VPS behind nginx. GitHub Actions deploys tested `main` and `preview`
+builds to separate sites. See [RELEASES.md](RELEASES.md); preview needs its DNS/TLS setup completed.
 
 ## Phase 2: multi-user foundation (later, only if pursued)
 - Accounts via email magic link or Sign in with Apple/Google.
@@ -61,5 +62,5 @@ Hosting: George will set up a subdomain on his own site later. Until then, it is
 - An App Store wrapper is only worth it if the web app proves itself.
 
 ## Open questions
-- Subdomain and host (George to set up).
+- Complete preview DNS/TLS, then review and promote the parser release.
 - Whether to add the model fallback in Phase 1 or wait.

@@ -62,11 +62,11 @@ On iPhone: open the served page, then Share → Add to Home Screen. The service 
 
 Other scripts: `npm run test:e2e` (see below), `npm test`, `npm run test:coverage`, `npm run test:watch`, `npm run typecheck`, `npm run lint`, `npm run format` (Biome auto-fix).
 
-CI (`.github/workflows/ci.yml`) runs typecheck, lint, unit tests, a build and the e2e smoke test on every pull request (and on pushes to `main`), and checks the deploy files (shellcheck, deploy script tests, `nginx -t`). It has read-only permissions, no secrets, and never deploys.
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, unit tests, deploy checks and browser tests on every pull request. Successful pushes to `preview` or `main` deploy the tested build to that environment on the VPS. See [the release workflow](docs/RELEASES.md) for branches, promotion, rollback and preview DNS/TLS setup.
 
 ## Deploy
 
-The app is hosted at `https://mealsplit.georgeanagnostou.com` as static files behind nginx on the same VPS as bookmarks. Deploys are manual from your machine: `make deploy` (or `npm run deploy`) checks, builds, uploads a new release and switches to it atomically; `make rollback` switches back. One-time server setup and the details are in [`docs/DEPLOY.md`](docs/DEPLOY.md).
+The app is hosted at `https://mealsplit.georgeanagnostou.com` as static files behind nginx. `preview` deploys to `https://preview.mealsplit.georgeanagnostou.com`; merging `preview` into `main` releases to production after checks pass. Manual `make deploy` and `make rollback` remain available. See [`docs/RELEASES.md`](docs/RELEASES.md) for routine releases and [`docs/DEPLOY.md`](docs/DEPLOY.md) for server details.
 
 ## Test
 
